@@ -20,7 +20,7 @@ Run in `root directory`:
 $ clang++ -flegacy-pass-manager -Xclang -load -Xclang build/skeleton/libSkeletonPass.* example.cpp
 
 ```shell
-$ clang++ -Xclang -load -Xclang build/mypass/libMypassPass.so -c example.cpp
+$ clang++ -Xclang -load -Xclang build/skeleton/libSkeletonPass.so -c example.cpp
 $ g++ -c rtlib.cpp
 $ g++ example.o rtlib.o
 ```
