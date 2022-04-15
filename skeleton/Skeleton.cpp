@@ -21,7 +21,7 @@ namespace {
       Type *retType = Type::getVoidTy(Ctx);
       FunctionType *logFuncType = FunctionType::get(retType, paramTypes, false);
       FunctionCallee logFunc = 
-       F.getParent()->getOrInsertFunction("logop", logFuncType);
+       F.getParent()->getOrInsertFunction("_Z5logopi", logFuncType);
 
       for (auto &B : F) {
         for (auto &I : B) {
@@ -29,7 +29,7 @@ namespace {
             // Insert *after* `op`.
             IRBuilder<> builder(op);
             builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
-
+            
             // Insert a call to our function.
             Value* args[] = {op};
             builder.CreateCall(logFunc, args);
