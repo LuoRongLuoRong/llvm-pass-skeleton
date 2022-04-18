@@ -10,6 +10,7 @@
 using namespace llvm;
 
 namespace {
+  // 继承自 FunctionPass
   struct SkeletonPass : public FunctionPass {
     static char ID;
     SkeletonPass() : FunctionPass(ID) {}
@@ -17,14 +18,26 @@ namespace {
     virtual bool runOnFunction(Function &F) {
       // Get the function to call from our runtime library.
       LLVMContext &Ctx = F.getContext();
-      std::vector<Type*> paramTypes = {Type::getInt32Ty(Ctx)};
+      std::vector<Type*> paramTypes = {
+        Type::getInt32Ty(Ctx),
+        
+      };
       Type *retType = Type::getVoidTy(Ctx);
       FunctionType *logFuncType = FunctionType::get(retType, paramTypes, false);
       FunctionCallee logFunc = 
-       F.getParent()->getOrInsertFunction("_Z5logopi", logFuncType);
+        F.getParent()->getOrInsertFunction("_Z5logopi", logFuncType);
+
+      // errs() << "Function: ";
+      // errs().write_escaped(F.getName()) << '\n';
 
       for (auto &B : F) {
         for (auto &I : B) {
+
+          errs() << I << ".\n";
+          // errs() << I.getOperand(0) << ".\n";
+          errs() << I.getOpcode() << ".\n";
+          errs() << I.getOpcodeName() << ".\n\n";
+
           if (auto *op = dyn_cast<BinaryOperator>(&I)) {
             // Insert *after* `op`.
             IRBuilder<> builder(op);
@@ -33,13 +46,12 @@ namespace {
             // Insert a call to our function.
             Value* args[] = {op};
             builder.CreateCall(logFunc, args);
-
-            return true;
           }
         }
       }
 
       return false;
+      // return true;
     }
   };
 }
