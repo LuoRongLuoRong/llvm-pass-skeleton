@@ -10,5 +10,5 @@ void logop(int i) {
 }
 
 void logvar(int i, std::string name) {
-    std::cout << "computed:  " << i << std::endl;
+    std::cout << "Num: " << i << "; Name: " << name << std::endl;
 }
