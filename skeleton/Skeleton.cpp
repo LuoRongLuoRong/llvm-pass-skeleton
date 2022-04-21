@@ -32,10 +32,11 @@ namespace {
       // 根据函数的名字获取该函数：
       FunctionCallee logFunc = F.getParent()->getOrInsertFunction("logop", logFuncType);
 
-      errs() << "\n\n" << "Function: " << *(logFunc.getCallee()) << '\n';
+      // errs() << "\n\n" << "Function: " << *(logFunc.getCallee()) << '\n';
+      errs() << "\n\n" << "FUNC: " << F.getName() << '\n';
 
       for (auto &B : F) {
-        for (auto &I : B) {          
+        for (auto &I : B) { 
           if (auto *op = dyn_cast<BinaryOperator>(&I)) {
             // Insert *after* `op`.
             IRBuilder<> builder(op);
@@ -62,6 +63,23 @@ namespace {
               }
             }
           }
+          
+          if (auto *instT = dyn_cast<StoreInst>(&I)) {    
+            // get name
+            // Value* val = dyn_cast<Value>(op->getOperand(0));
+            // while(val){
+            //     Instruction* in = dyn_cast<Instruction>(val);
+            //     Value *vl = in->getOperand(0);
+            // }
+
+            Value* val = dyn_cast<Value>(instT->getOperand(0));
+            
+            // while (instT && instT->getOpcode() != Instruction::Alloca) {
+            //   Value* val = dyn_cast<Value>(instT);
+            //   errs() << val->getName().str() << '\n';
+            //   instT = dyn_cast<Instruction>(instT->getOperand(0));
+            // }
+          }
 
           if (auto *op = dyn_cast<StoreInst>(&I)) {            
             errs() << *op << ".StoreInst\n";
@@ -78,26 +96,28 @@ namespace {
             // store i32 %4, i32* %2, align 4, !dbg !863
             Value *arg1 = op->getOperand(0);  // %4 = xxx
             Value *arg2 = op->getOperand(1);  // %2 = xxx
-            // Value *arg3 = op->getOperand(2);  // %2 = xxx
-            // Value *arg4 = op->getOperand(3);  // %2 = xxx
-            errs() << arg1 << "·" << arg2 << "\n";
+            errs() << *arg1 << ": " << arg1->getName() << "·" << *arg2 << ": " << arg2->getName()  << "\n";
+            
 
-            // !863 = !DILocation(line: 6, column: 7, scope: !857)
-            unsigned mk = op->getContext().getMDKindID("dbg");
-            MDNode *mdn = op->getMetadata(mk);
-
-            if (mdn) {
+            auto alloca = dyn_cast<AllocaInst>(arg2);  // 找到 %2 的 metadata，即获取其名字
+          
+            if (alloca->hasMetadata()) {
+              errs() << "...has md...";
+            }
+            unsigned mk = alloca->getContext().getMDKindID("dbg");
+            if (MDNode *mdn = alloca->getMetadata(mk)) {
               Metadata *mds = mdn->getOperand(0);
+
               StringRef str;
               if (MDString::classof(mds)) {
                 str = (cast<MDString>(*mds)).getString();
                 errs() << str;
               }
             } else {
-              errs() << "no dbg!\n";
+              errs() << "no mdn!\n";
             }
           }
-        }
+        }      
       }
       
       return false;
