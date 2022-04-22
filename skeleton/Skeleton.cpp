@@ -79,10 +79,6 @@ namespace {
 
       for (auto &B : F) {
         for (auto &I : B) { 
-          
-          // if (I.isUsedByMetadata()) {
-          //   errs() << "Used: " << I << "UsedByMetadata\n";
-          // }
           // get metadata
           if (auto *inst = dyn_cast<ReturnInst>(&I)) {
             // call void @llvm.dbg.declare(metadata i32* %2, metadata !858, metadata !DIExpression()), !dbg !859
@@ -195,7 +191,7 @@ namespace {
             }
           }
           if (auto *instT = dyn_cast<StoreInst>(&I)) {
-            // logif(instT, B, logFunc, Ctx);
+            logif(instT, B, logFunc, Ctx);
           }
         }      
       }
@@ -225,10 +221,11 @@ namespace {
     void logif(StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx) {
       IRBuilder<> builder(inst);
       builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
+
       Value *argi = inst->getOperand(0);  // left
       if (auto constant_int = dyn_cast<ConstantInt>(argi)) {
-        Value *argf = ConstantFP::get(Type::getInt32Ty(Ctx), 1);
-        Value* args[] = {argi, argf};
+        Value *argf = ConstantFP::get(Type::getFloatTy(Ctx), 1);
+        Value* args[] = {argi, argf};  // 
         builder.CreateCall(logFunc, args);
       } else {
         errs() << "store inst has no instance number" << "\n";
