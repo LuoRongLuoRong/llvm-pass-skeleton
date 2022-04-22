@@ -16,6 +16,37 @@ namespace {
     static char ID;
     SkeletonPass() : FunctionPass(ID) {}
 
+    void printFunctionName(Function &F) {
+      DISubprogram* DI = F.getSubprogram();
+      if(!DI) {
+        errs() << "Function " << F.getName() << " does not have a subprogram\n";
+        return;
+      } 
+      StringRef IRName = F.getName();
+      StringRef SourceName = DI->getName();
+      StringRef LinkageName = DI->getLinkageName();
+
+      errs() << "the ir name " << IRName << "\n";
+      errs() << "the source name is " << SourceName << "\n";
+      errs() << "the linkage name is " << LinkageName << "\n";
+      errs() << "\n";
+    }
+
+    void getMDNodes(Function &F){
+      // MDNode* meta;
+      // int offset;
+      SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+      F.getAllMetadata(MDs);
+      errs() << "F 的 METADATA node 数目为 " << (MDs.size()) << " 嘤嘤嘤";
+      for (auto &MD : MDs) {
+        if (MDNode *N = MD.second) {
+          if (auto *subProgram = dyn_cast<DISubprogram>(N)) {
+            errs() << subProgram->getLine();
+          }
+        }
+      }
+    }
+    
     virtual bool runOnFunction(Function &F) {
       // Get the function to call from our runtime library.
       LLVMContext &Ctx = F.getContext();
@@ -34,9 +65,50 @@ namespace {
 
       // errs() << "\n\n" << "Function: " << *(logFunc.getCallee()) << '\n';
       errs() << "\n\n" << "FUNC: " << F.getName() << '\n';
+      printFunctionName(F);
+      getMDNodes(F);
 
       for (auto &B : F) {
         for (auto &I : B) { 
+          // get metadata
+          if (auto *inst = dyn_cast<ReturnInst>(&I)) {
+            // call void @llvm.dbg.declare(metadata i32* %2, metadata !858, metadata !DIExpression()), !dbg !859
+            // ret i32 0, !dbg !865
+            errs() << "!!!return: " << *inst << "\n";
+            // errs() << "   return: " << *(inst->getValueName()) << ": " << inst->getName() << "\n";
+            // errs() << "   return: " << inst->getOperand(0) << "\n";
+          }
+          // get varibale name
+          if (auto *instT = dyn_cast<StoreInst>(&I)) {
+            
+            // Value* val = dyn_cast<Value>(op->getOperand(0));
+            // while(val){
+            //   Instruction* in = dyn_cast<Instruction>(val);
+            //   Value *vl = in->getOperand(0);
+            // }
+
+            // 大哥的代码
+            // while (instT && instT->getOpcode() != Instruction::Alloca) {
+            //   Value* val = dyn_cast<Value>(instT);
+            //   print(val->getName().str());
+            //   instT = dyn_cast<Instruction>(instT->getOperand(0));
+            // }
+            
+            // while (instT->getOpcode() == Instruction::Store) {
+            //   errs() << "Optype:" << instT->getOpcodeName << ".\n";
+            //   instT = dyn_cast<StoreInst>(instT->getOperand(1));
+            // }
+            // if (instT->getOpcode() == Instruction::Alloca) {
+            //   Value* val = dyn_cast<Value>(instT);              
+            //   errs() << "val name: " << val->getName().str() << ".\n";
+            // }
+          }
+
+          if (auto *instT = dyn_cast<AllocaInst>(&I)) {
+            Value* val = dyn_cast<Value>(instT);              
+            errs() << "val name: " << val->getName().str() << ".\n";
+          }
+
           if (auto *op = dyn_cast<BinaryOperator>(&I)) {
             // Insert *after* `op`.
             IRBuilder<> builder(op);
@@ -63,23 +135,6 @@ namespace {
               }
             }
           }
-          
-          if (auto *instT = dyn_cast<StoreInst>(&I)) {    
-            // get name
-            // Value* val = dyn_cast<Value>(op->getOperand(0));
-            // while(val){
-            //     Instruction* in = dyn_cast<Instruction>(val);
-            //     Value *vl = in->getOperand(0);
-            // }
-
-            Value* val = dyn_cast<Value>(instT->getOperand(0));
-            
-            // while (instT && instT->getOpcode() != Instruction::Alloca) {
-            //   Value* val = dyn_cast<Value>(instT);
-            //   errs() << val->getName().str() << '\n';
-            //   instT = dyn_cast<Instruction>(instT->getOperand(0));
-            // }
-          }
 
           if (auto *op = dyn_cast<StoreInst>(&I)) {            
             errs() << *op << ".StoreInst\n";
@@ -98,7 +153,6 @@ namespace {
             Value *arg2 = op->getOperand(1);  // %2 = xxx
             errs() << *arg1 << ": " << arg1->getName() << "·" << *arg2 << ": " << arg2->getName()  << "\n";
             
-
             auto alloca = dyn_cast<AllocaInst>(arg2);  // 找到 %2 的 metadata，即获取其名字
           
             if (alloca->hasMetadata()) {
