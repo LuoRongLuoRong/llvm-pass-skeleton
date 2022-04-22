@@ -1,9 +1,9 @@
 #include <iostream>
 
 int main() {
-    int b;
+    int b = 0;
     int a;
     std::cin >> a;
     b = a;
-    return 0;
+    return b;
 }
