@@ -46,6 +46,13 @@ namespace {
         }
       }
     }
+
+    void getFunSubprogram(Function &F) {
+      if (auto *subprogram = F.getSubprogram())
+        errs() << subprogram->getLine() << "\n";
+      else
+        errs() << "has no subprogram" << "\n";
+    }
     
     virtual bool runOnFunction(Function &F) {
       // Get the function to call from our runtime library.
@@ -53,21 +60,22 @@ namespace {
       // 函数参数：
       std::vector<Type*> paramTypes = {
         Type::getInt32Ty(Ctx),
-        Type::getInt8PtrTy(Ctx)
-        // Type::getPointerElementType(Ctx)
-        // Type::getTokenTy(Ctx)
+        // Type::getInt8PtrTy(Ctx)
+        Type::getFloatTy(Ctx)
       };
       // 函数返回值：
       Type *retType = Type::getVoidTy(Ctx);
       // 函数类型：
       FunctionType *logFuncType = FunctionType::get(retType, paramTypes, false);
       // 根据函数的名字获取该函数：
-      FunctionCallee logFunc = F.getParent()->getOrInsertFunction("logvar", logFuncType);
+      // FunctionCallee logFunc = F.getParent()->getOrInsertFunction("logvar", logFuncType);
+      FunctionCallee logFunc = F.getParent()->getOrInsertFunction("logif", logFuncType);
 
       // errs() << "\n\n" << "Function: " << *(logFunc.getCallee()) << '\n';
       errs() << "\n\n" << "FUNC: " << F.getName() << '\n';
       printFunctionName(F);
       getMDNodes(F);
+      getFunSubprogram(F);
 
       for (auto &B : F) {
         for (auto &I : B) { 
@@ -79,9 +87,10 @@ namespace {
           if (auto *inst = dyn_cast<ReturnInst>(&I)) {
             // call void @llvm.dbg.declare(metadata i32* %2, metadata !858, metadata !DIExpression()), !dbg !859
             // ret i32 0, !dbg !865
-            errs() << "!!!return: " << *inst << "\n";
+            // errs() << "!!!return: " << *inst << "\n";
 
-            // DILocation *DILoc = inst->getDebugLoc().get();
+            // DILocation *DILoc = inst->getDebugLoc();
+            // // DILocation *DILoc = inst->getDebugLoc().get();
             // errs() << "   " << DILoc << "."<< "\n";
 
             // Type *instTy = inst->getType();
@@ -93,12 +102,12 @@ namespace {
             //   int number = constant_int->getSExtValue();
             //   errs() << "   val number: " << number << ".\n";
             // }       
-            // errs() << "   return: " << *(inst->getValueName()) << ": " << inst->getName() << "\n";
-            // errs() << "   return: " << inst->getOperand(0) << "\n";
+            // errs() << "   return: " << ": " << inst->getName() << "\n";
+            // // errs() << "   return: " << inst->getOperand(0) << "\n";  // here error
           }
           // get varibale name
           if (auto *instT = dyn_cast<StoreInst>(&I)) {
-            
+            // logif(instT, B, logFunc, Ctx);
             // Value* val = dyn_cast<Value>(op->getOperand(0));
             // while(val){
             //   Instruction* in = dyn_cast<Instruction>(val);
@@ -129,11 +138,7 @@ namespace {
 
           if (auto *op = dyn_cast<BinaryOperator>(&I)) {
             // Insert *after* `op`.
-            IRBuilder<> builder(op);
-            builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
-
-            Value* args[] = {op};
-            builder.CreateCall(logFunc, args);
+            boComputed(op, B, logFunc);
           }
 
           // if (auto *op = dyn_cast<LoadInst>(&I)) {
@@ -186,8 +191,23 @@ namespace {
                 errs() << str;
               }
             } else {
-              errs() << "no mdn!\n";
+              errs() << "no mk!\n";
             }
+          }
+          if (auto *instT = dyn_cast<StoreInst>(&I)) {
+            // logif(instT, B, logFunc, Ctx);
+          }
+        }      
+      }
+      
+      return false;
+    }
+
+          //   if(dyn_cast<ConstantInt>(arg1)) {
+          //     errs() << "arg1 is constant int";              
+          //   } else {
+          //     errs() << "arg1 is not constant int";
+          //   }
 
             // instrument: Insert *after* `op`.
             // IRBuilder<> builder(op);
@@ -200,32 +220,28 @@ namespace {
 
             // Value *args[] = {arg1, };
             // builder.CreateCall(logFunc, args);
-          }
-        }      
+
+    // int and float function test
+    void logif(StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx) {
+      IRBuilder<> builder(inst);
+      builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
+      Value *argi = inst->getOperand(0);  // left
+      if (auto constant_int = dyn_cast<ConstantInt>(argi)) {
+        Value *argf = ConstantFP::get(Type::getInt32Ty(Ctx), 1);
+        Value* args[] = {argi, argf};
+        builder.CreateCall(logFunc, args);
+      } else {
+        errs() << "store inst has no instance number" << "\n";
       }
-      
-      return false;
     }
-    
-          //   // MDString *mds = dyn_cast_or_null<MDString>(mdn->getOperand(1));
-          //   // std::string varName = mds->getString().str();
-            
-            
-          //   errs() << "Store::";
-          //   errs() << *arg1 << "\n";
-          //   errs() << (op->getMetadata(op->getContext().getMDKindID("dbg"))) << "\n";
-          //   errs() << "   Store::arg1->getName() : " << arg1->getName() << "\n\n";
 
-          //   // Insert *after* `op`.
-          //   IRBuilder<> builder(op);
-          //   builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
+    void boComputed(BinaryOperator *op, BasicBlock &B, FunctionCallee logFunc) {
+      IRBuilder<> builder(op);
+      builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
-          //   if(dyn_cast<ConstantInt>(arg1)) {
-          //     errs() << "arg1 is constant int";              
-          //   } else {
-          //     errs() << "arg1 is not constant int";
-          //   }
-
+      Value* args[] = {op};
+      builder.CreateCall(logFunc, args);
+    }
   };
 }
 
