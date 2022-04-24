@@ -49,7 +49,7 @@ namespace {
 
     void getFunSubprogram(Function &F) {
       if (auto *subprogram = F.getSubprogram())
-        errs() << subprogram->getLine() << "\n";
+        errs() << "Subprogram: " << subprogram->getLine() << "\n";
       else
         errs() << "has no subprogram" << "\n";
     }
@@ -73,9 +73,9 @@ namespace {
 
       // errs() << "\n\n" << "Function: " << *(logFunc.getCallee()) << '\n';
       errs() << "\n\n" << "FUNC: " << F.getName() << '\n';
-      printFunctionName(F);
-      getMDNodes(F);
-      getFunSubprogram(F);
+      // printFunctionName(F);
+      // getMDNodes(F);
+      // getFunSubprogram(F);
 
       for (auto &B : F) {
         for (auto &I : B) { 
@@ -83,14 +83,23 @@ namespace {
           if (auto *inst = dyn_cast<ReturnInst>(&I)) {
             // call void @llvm.dbg.declare(metadata i32* %2, metadata !858, metadata !DIExpression()), !dbg !859
             // ret i32 0, !dbg !865
-            // errs() << "!!!return: " << *inst << "\n";
+            errs() << "\n!!!return: " << *inst << "\n";
 
-            // DILocation *DILoc = inst->getDebugLoc();
-            // // DILocation *DILoc = inst->getDebugLoc().get();
-            // errs() << "   " << DILoc << "."<< "\n";
+            if (DILocation *DILoc = inst->getDebugLoc()) {
+              errs() << "   DILocation: " << *DILoc <<  ".\n";
+              // DILocation: !DILocation(line: 74, column: 25, scope: <0x8ddaee0>) = !DILocation(line: 74, column: 25, scope: <0x8ddaee0>).
+              errs() << "        line : " << DILoc->getLine() <<  ".\n";
+              errs() << "        col  : " << DILoc->getColumn() <<  ".\n";
+              errs() << "        scope: " << DILoc->getScope() <<  ".\n";
+            }
 
-            // Type *instTy = inst->getType();
-            // errs() << "   " << *instTy << "."<< "\n";
+            if (Value *retVal = inst->getReturnValue()) {
+              errs() << "   ret value: " << *retVal << "\n";
+
+              if (Type *instTy = retVal->getType())
+                errs() << "   " << *instTy << "\n";
+            }
+              
             
             // Value* val = dyn_cast<Value>(inst);
             // errs() << "   val name: " << val->getName().str() << ".\n";   
