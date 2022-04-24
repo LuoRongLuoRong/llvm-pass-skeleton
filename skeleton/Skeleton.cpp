@@ -90,25 +90,19 @@ namespace {
               // DILocation: !DILocation(line: 74, column: 25, scope: <0x8ddaee0>) = !DILocation(line: 74, column: 25, scope: <0x8ddaee0>).
               errs() << "        line : " << DILoc->getLine() <<  ".\n";
               errs() << "        col  : " << DILoc->getColumn() <<  ".\n";
-              errs() << "        scope: " << DILoc->getScope() <<  ".\n";
+              // errs() << "        scope: " << *(DILoc->getScope()) <<  ".\n";
             }
 
             if (Value *retVal = inst->getReturnValue()) {
-              errs() << "   ret value: " << *retVal << "\n";
+              errs() << "   ret_value: " << *retVal << "\n";
 
               if (Type *instTy = retVal->getType())
-                errs() << "   " << *instTy << "\n";
+                errs() << "   ret_value_type: " << *instTy << "\n";
+
+              if (auto constant_int = dyn_cast<ConstantInt>(retVal)) {
+                errs() << "   val_number: " << constant_int->getSExtValue() << ".\n";
+              }
             }
-              
-            
-            // Value* val = dyn_cast<Value>(inst);
-            // errs() << "   val name: " << val->getName().str() << ".\n";   
-            // if (auto constant_int = dyn_cast<ConstantInt>(val)) {
-            //   int number = constant_int->getSExtValue();
-            //   errs() << "   val number: " << number << ".\n";
-            // }       
-            // errs() << "   return: " << ": " << inst->getName() << "\n";
-            // // errs() << "   return: " << inst->getOperand(0) << "\n";  // here error
           }
           // get varibale name
           if (auto *instT = dyn_cast<StoreInst>(&I)) {
@@ -138,7 +132,8 @@ namespace {
 
           if (auto *instT = dyn_cast<AllocaInst>(&I)) {
             Value* val = dyn_cast<Value>(instT);              
-            errs() << "val name: " << val->getName().str() << ".\n";
+            // errs() << "Val name: " << val->getName().str() << ".\n";
+            // alloca has no name
           }
 
           if (auto *op = dyn_cast<BinaryOperator>(&I)) {
