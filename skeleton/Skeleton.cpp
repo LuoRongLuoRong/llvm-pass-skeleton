@@ -112,24 +112,29 @@ namespace {
           //   }
           // }
 
+          
           if (auto *op = dyn_cast<StoreInst>(&I)) {
-            Value *val = op->getValueOperand();
-            if (auto constant_int = dyn_cast<ConstantInt>(val)) {
+            // get left: value
+            Value *arg1 = op->getOperand(0);  // %4 = xxx
+            errs() << "StoreInst L: " << *arg1 << ": [" << arg1->getName() << "]\n";
+            // 1. is a int value
+            if (auto constant_int = dyn_cast<ConstantInt>(arg1)) {
               int number = constant_int->getSExtValue();
-              errs() << number << ".\n";
-            } else if (auto constant_fp = dyn_cast<ConstantFP>(val)) {
+              errs() << "StoreInst L: value = [" << number << "].\n";
+            } 
+            // 2. is a float value
+            else if (auto constant_fp = dyn_cast<ConstantFP>(arg1)) {
               // float number = constant_fp->getValueAPF();
               // errs() << number << ".\n";
-            }
+            } 
+            // 3. ...
+            else {
 
-            // metadata
-            // store i32 %4, i32* %2, align 4, !dbg !863
-            Value *arg1 = op->getOperand(0);  // %4 = xxx
-            Value *arg2 = op->getOperand(1);  // %2 = xxx
-            errs() << *arg1 << ": " << arg1->getName() << "·" << *arg2 << ": " << arg2->getName()  << "\n";
-            // logvar(op, B, logFunc, Ctx);
+            }
+            
+            logvar(op, B, logFunc, Ctx);
           }
-        }      
+        }
       }
       
       return false;
@@ -139,10 +144,20 @@ namespace {
       IRBuilder<> builder(inst);
       builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
+      // get right: name            
+      Value *arg2 = inst->getOperand(1);  // %2 = xxx
+      Instruction *arg2ins = dyn_cast<Instruction>(arg2);
+      while (arg2ins->getOpcode() != Instruction::Alloca) {
+        errs() << "        R: " << *arg2ins << "\n";
+        arg2ins = dyn_cast<Instruction>(arg2ins->getOperand(1));
+      }
+      errs() << "StoreInst R: " << *arg2ins << ": [" << arg2ins->getName() << "]\n";
+      Value *argstr = builder.CreateGlobalString(arg2ins->getName());    
+
       Value *argi = inst->getOperand(0);  // left
       if (auto constant_int = dyn_cast<ConstantInt>(argi)) {
         errs() << "store inst has instance number" << constant_int << "\n";
-        Value *argstr = inst->getOperand(1);
+        
         Value* args[] = {argi, argstr};  // 
         builder.CreateCall(logFunc, args);
       } else {
@@ -157,7 +172,7 @@ namespace {
 
       Value *argi = inst->getOperand(0);  // left
       if (auto constant_int = dyn_cast<ConstantInt>(argi)) {
-        Value *argf = ConstantFP::get(Type::getFloatTy(Ctx), 1);
+        Value* argf = ConstantFP::get(Type::getFloatTy(Ctx), 1);
         Value* args[] = {argi, argf};  // 
         builder.CreateCall(logFunc, args);
       } else {
