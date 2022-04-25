@@ -47,6 +47,20 @@ namespace {
       }
     }
 
+    void getLocalVariables(Function &F) {
+      ValueSymbolTable *vst = F.getValueSymbolTable();
+      // errs() << "LocalVariables:" << vst << '\n';
+
+      // for (auto vs : &vst) {
+      //   auto s = vs.getKey();
+      //   auto v = vs.getValue();
+      // }
+      // for (auto it : &vst){
+	    //   errs() << it.first <<" "<< it.second << '\n';
+      // }
+
+    }
+
     void getFunSubprogram(Function &F) {
       if (auto *subprogram = F.getSubprogram())
         errs() << "Subprogram: " << subprogram->getLine() << "\n";
@@ -76,9 +90,12 @@ namespace {
       // printFunctionName(F);
       // getMDNodes(F);
       // getFunSubprogram(F);
-
       for (auto &B : F) {
-        for (auto &I : B) { 
+        for (auto &I : B) {
+          
+          getLocalVariables(F);
+          errs() << "【" << I.getName() << "】" << I << " " << "\n.";
+
           // get metadata
           if (auto *inst = dyn_cast<ReturnInst>(&I)) {
             // call void @llvm.dbg.declare(metadata i32* %2, metadata !858, metadata !DIExpression()), !dbg !859
