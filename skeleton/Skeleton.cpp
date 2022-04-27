@@ -92,7 +92,6 @@ namespace {
       // getFunSubprogram(F);
       for (auto &B : F) {
         for (auto &I : B) {
-          errs() << "【" << I.getName() << "】" << I << " " << "\n";
 
           // if (auto *op = dyn_cast<LoadInst>(&I)) {
           //   int number;
@@ -112,14 +111,19 @@ namespace {
           //   }
           // }
 
-          if (auto *op = dyn_cast<StoreInst>(&I)) {
+          if (auto *op = dyn_cast<StoreInst>(&I)) {     
+            
+          errs() << "【" << I.getName() << "】" << I << " " << "\n";       
             // get left: value
             Value *arg1 = op->getOperand(0);  // %4 = xxx
+            if (arg1->getName().str() != "m_check_state") {
+              continue;
+            }
             errs() << "StoreInst L: " << *arg1 << ": [" << arg1->getName() << "]\n";
             // 1. is a int value
             if (auto constant_int = dyn_cast<ConstantInt>(arg1)) {
               int number = constant_int->getSExtValue();
-              errs() << "StoreInst L: value = [" << number << "].\n";
+              // errs() << "StoreInst L: value = [" << number << "].\n";
             } 
             // 2. is a float value
             else if (auto constant_fp = dyn_cast<ConstantFP>(arg1)) {
@@ -147,7 +151,7 @@ namespace {
       Value *arg2 = inst->getOperand(1);  // %2 = xxx
       Instruction *arg2ins = dyn_cast<Instruction>(arg2);
       while (arg2ins->getOpcode() != Instruction::Alloca) {
-        errs() << "        R: " << *arg2ins << "\n";
+        // errs() << "        R: " << *arg2ins << "\n";
         arg2ins = dyn_cast<Instruction>(arg2ins->getOperand(1));
       }
       errs() << "StoreInst R: " << *arg2ins << ": [" << arg2ins->getName() << "]\n";
