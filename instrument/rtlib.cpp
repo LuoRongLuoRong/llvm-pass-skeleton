@@ -9,9 +9,9 @@ extern "C" void logvar(int i, char* name) {
     std::cout << "Num: " << i << "; Name: " << name << std::endl;
 }
 
-// extern "C" void logvar(int i, std::string name) {
-//     std::cout << "Num: " << i << "; Name: " << name << std::endl;
-// }
+extern "C" void logvartiny(int line, char* name, int state) {
+    std::cout << "Line " << line << ": " << name << " = " << state << "." << std::endl;
+}
 
 extern "C" void logif(int i, float f) {
     std::cout << "Num: " << i << "; Float: " << f << std::endl;

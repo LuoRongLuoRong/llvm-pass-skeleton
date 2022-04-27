@@ -8,12 +8,15 @@
 #   test_file_name=$pre_name
 # fi
 
+# test_file_name='test0add'
 test_file_name='test1cout'
 cd ./build
 cmake ..
 make
 cd ../instrument/
-clang++ -flegacy-pass-manager -Xclang -load -Xclang ../build/skeleton/libSkeletonPass.so ../src/$test_file_name.cpp
+g++ -c rtlib.cpp
+clang++ -flegacy-pass-manager -O0 -g -fno-discard-value-names -Xclang -load -Xclang ../build/skeleton/libSkeletonPass.so -c ../src/$test_file_name.cpp
+g++ $test_file_name.o rtlib.o
 
 echo 'input a number:'
 ./a.out
