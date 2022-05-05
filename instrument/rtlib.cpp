@@ -9,7 +9,7 @@ extern "C" void logvar(int i, char* name) {
     std::cout << "Num: " << i << "; Name: " << name << std::endl;
 }
 
-extern "C" void logvartiny(int line, char* name, int state) {
+extern "C" void loglinevar(int line, char* name, int state) {
     std::cout << "Line " << line << ": " << name << " = " << state << "." << std::endl;
 }
 
