@@ -8,6 +8,11 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Value.h"
+
 using namespace llvm;
 
 namespace {  
@@ -48,17 +53,18 @@ namespace {
     }
 
     void getLocalVariables(Function &F) {
+      // not test yet
       ValueSymbolTable *vst = F.getValueSymbolTable();
-      // errs() << "LocalVariables:" << vst << '\n';
+      errs() << (*vst).size() << "\n.";
 
-      // for (auto vs : &vst) {
-      //   auto s = vs.getKey();
-      //   auto v = vs.getValue();
-      // }
-      // for (auto it : &vst){
-	    //   errs() << it.first <<" "<< it.second << '\n';
-      // }
-
+      for (ValueSymbolTable::iterator VI = vst->begin(), VE = vst->end(); VI != VE; ++VI) {
+        Value *V = VI->getValue();
+        if (!isa<GlobalValue>(V) || cast<GlobalValue>(V)->hasLocalLinkage()) {
+          if (!V->getName().startswith("llvm.dbg"))
+            // Set name to "", removing from symbol table!
+            V->setName("");
+        }
+      }
     }
 
     void getFunSubprogram(Function &F) {
@@ -68,28 +74,41 @@ namespace {
         errs() << "has no subprogram" << "\n";
     }
     
+    // IR 指令在源代码中的行号
+    Value* getLine(StoreInst *inst, LLVMContext &Ctx) {
+      if (DILocation *DILoc = inst->getDebugLoc()) {
+        return ConstantInt::get(Type::getInt32Ty(Ctx), DILoc->getLine());
+      }
+      return ConstantInt::get(Type::getInt32Ty(Ctx), 0);
+    }
+    
     virtual bool runOnFunction(Function &F) {
       // Get the function to call from our runtime library.
       LLVMContext &Ctx = F.getContext();
       // 函数参数：
-      std::vector<Type*> paramTypes = {
-        Type::getInt32Ty(Ctx),
-        Type::getInt8PtrTy(Ctx),
-        Type::getInt32Ty(Ctx)
+      std::vector<Type*> paramTypesInt = {
+        Type::getInt32Ty(Ctx),  // line
+        Type::getInt8PtrTy(Ctx),  // name
+        Type::getInt32Ty(Ctx)  // state
+        // Type::getFloatTy(Ctx)
+      };
+      std::vector<Type*> paramTypesChars = {
+        Type::getInt32Ty(Ctx),  // line
+        Type::getInt8PtrTy(Ctx),  // name
+        Type::getInt8PtrTy(Ctx)  // state
         // Type::getFloatTy(Ctx)
       };
       // 函数返回值：
       Type *retType = Type::getVoidTy(Ctx);
       // 函数类型：
-      FunctionType *logFuncType = FunctionType::get(retType, paramTypes, false);
+      FunctionType *logFuncIntType = FunctionType::get(retType, paramTypesInt, false);
+      FunctionType *logFuncCharsType = FunctionType::get(retType, paramTypesChars, false);
       // 根据函数的名字获取该函数：
-      // FunctionCallee logFunc = F.getParent()->getOrInsertFunction("logvar", logFuncType);
-      // FunctionCallee logFunc = F.getParent()->getOrInsertFunction("logif", logFuncType);
-      FunctionCallee logFunc = F.getParent()->getOrInsertFunction("loglinevar", logFuncType);
-
+      FunctionCallee logFuncInt = F.getParent()->getOrInsertFunction("loglinevarint", logFuncIntType);
+      FunctionCallee logFuncChars = F.getParent()->getOrInsertFunction("loglinevarchars", logFuncIntType);
 
       // errs() << "\n\n" << "Function: " << *(logFunc.getCallee()) << '\n';
-      errs() << "" << "FUNC: " << F.getName() << '\n';
+      // errs() << "" << "FUNC: " << F.getName() << '\n';
       // printFunctionName(F);
       // getMDNodes(F);
       // getFunSubprogram(F);
@@ -114,32 +133,37 @@ namespace {
           //   }
           // }
 
-          if (auto *op = dyn_cast<StoreInst>(&I)) {   
-            
-            errs() << "【" << I.getName() << "】" << I << " " << "\n";       
+          if (auto *op = dyn_cast<StoreInst>(&I)) {
             // get left: value
             Value *arg1 = op->getOperand(0);  // %4 = xxx
-            // if (arg1->getName().str() != "m_check_state") {
-            //   continue;
-            // }
+            Value *arg2 = op->getOperand(1);
+            
+            if (arg2->getName().str() != "m_check_state") {
+              continue;
+            }
+            errs() << "【" << I << "】" << "\n"; 
             errs() << "StoreInst L: " << *arg1 << ": [" << arg1->getName() << "]\n";
             // 1. is a int value
             if (auto constant_int = dyn_cast<ConstantInt>(arg1)) {
               int number = constant_int->getSExtValue();
-              // errs() << "StoreInst L: value = [" << number << "].\n";
+              log_line_var_int(op, B, logFuncInt, Ctx);
+              // 【】  store %class.util_timer* null, %class.util_timer** %head, align 8, !dbg !4416 
+              // StoreInst L: %class.util_timer* null: []
+              // 报错
             } 
             // 2. is a float value
             else if (auto constant_fp = dyn_cast<ConstantFP>(arg1)) {
               // float number = constant_fp->getValueAPF();
               // errs() << number << ".\n";
             } 
-            // 3. ...
-            else {
+            // 3. char[] or string
+            else if(true){
 
+            } 
+            // others
+            else {
+              //
             }
-            
-            // logvar(op, B, logFunc, Ctx);
-            log_line_var(op, B, logFunc, Ctx);
           }
         }
       }
@@ -147,14 +171,28 @@ namespace {
       return false;
     }
 
-    Value* getLine(StoreInst *inst, LLVMContext &Ctx) {
-      if (DILocation *DILoc = inst->getDebugLoc()) {
-        return ConstantInt::get(Type::getInt32Ty(Ctx), DILoc->getLine());
+    void log_line_var_int(StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx) {
+      IRBuilder<> builder(inst);
+      builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
+
+      // get right: name            
+      Value *arg2 = inst->getOperand(1);  
+      errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
+
+      Value *argstr = builder.CreateGlobalString(arg2->getName());    
+      Value *argi = inst->getOperand(0);
+      Value* argline = getLine(inst, Ctx);
+
+      Value* args[] = {argline, argstr, argi};  // 
+      builder.CreateCall(logFunc, args);
+      if (auto constant_int = dyn_cast<ConstantInt>(argi)) {
+        errs() << "store inst has instance number" << constant_int << "\n";
+      } else {
+        errs() << "store inst has no instance number" << "\n";
       }
-      return ConstantInt::get(Type::getInt32Ty(Ctx), 0);
     }
 
-    void log_line_var(StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx) {
+    void log_line_var_old(StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx) {
       IRBuilder<> builder(inst);
       builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 

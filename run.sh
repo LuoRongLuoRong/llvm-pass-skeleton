@@ -18,6 +18,7 @@ cd ../instrument/
 g++ -c rtlib.cpp
 # clang++ -flegacy-pass-manager -O0 -g -fno-discard-value-names -Xclang -load -Xclang ../build/skeleton/libSkeletonPass.so -c ../src/$test_file_name.cpp
 clang++ -flegacy-pass-manager -O0 -g -fno-discard-value-names -Xclang -load -Xclang ../build/skeleton/libSkeletonPass.so -c ../src/$test_file_name.ll
+
 g++ $test_file_name.o rtlib.o
 
 echo 'input a number:'
