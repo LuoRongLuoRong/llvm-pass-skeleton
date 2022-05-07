@@ -112,6 +112,7 @@ namespace {
       // printFunctionName(F);
       // getMDNodes(F);
       // getFunSubprogram(F);
+
       for (auto &B : F) {
         for (auto &I : B) {
 
@@ -146,13 +147,9 @@ namespace {
             // 1. is a int value
             if (auto constant_int = dyn_cast<ConstantInt>(arg1)) {
               int number = constant_int->getSExtValue();
-              log_line_var_int(op, B, logFuncInt, Ctx);
-              // 【】  store %class.util_timer* null, %class.util_timer** %head, align 8, !dbg !4416 
-              // StoreInst L: %class.util_timer* null: []
-              // 报错
             } 
-            // 2. is a float value
-            else if (auto constant_fp = dyn_cast<ConstantFP>(arg1)) {
+            // 2. is a char value
+            else if (auto constant_char = dyn_cast<Constant>(arg1)) {
               // float number = constant_fp->getValueAPF();
               // errs() << number << ".\n";
             } 
@@ -164,11 +161,30 @@ namespace {
             else {
               //
             }
+            
+            log_line_var_int(op, B, logFuncInt, Ctx);
           }
         }
       }
       
-      return false;
+      return true;
+    }
+
+    void log_line_var(StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx) {
+      IRBuilder<> builder(inst);
+      builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
+
+      // get right: name            
+      Value *arg2 = inst->getOperand(1);  
+      errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
+
+      Value* argstr = builder.CreateGlobalString(arg2->getName());    
+      Value* argline = getLine(inst, Ctx);
+
+      Value* argi = inst->getOperand(0);
+
+      Value* args[] = {argline, argstr, argi};  // 
+      builder.CreateCall(logFunc, args);
     }
 
     void log_line_var_int(StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx) {
@@ -179,8 +195,8 @@ namespace {
       Value *arg2 = inst->getOperand(1);  
       errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
 
-      Value *argstr = builder.CreateGlobalString(arg2->getName());    
-      Value *argi = inst->getOperand(0);
+      Value* argstr = builder.CreateGlobalString(arg2->getName());    
+      Value* argi = inst->getOperand(0);
       Value* argline = getLine(inst, Ctx);
 
       Value* args[] = {argline, argstr, argi};  // 
@@ -233,9 +249,9 @@ namespace {
         arg2ins = dyn_cast<Instruction>(arg2ins->getOperand(1));
       }
       errs() << "StoreInst R: " << *arg2ins << ": [" << arg2ins->getName() << "]\n";
-      Value *argstr = builder.CreateGlobalString(arg2ins->getName());    
+      Value* argstr = builder.CreateGlobalString(arg2ins->getName());    
 
-      Value *argi = inst->getOperand(0);  // left
+      Value* argi = inst->getOperand(0);  // left
       Value* args[] = {argi, argstr};  // 
       builder.CreateCall(logFunc, args);
       if (auto constant_int = dyn_cast<ConstantInt>(argi)) {
