@@ -7,7 +7,19 @@ extern "C" void loglinevarint(int line, char* name, int state) {
     std::cout << "Line " << line << ": " << name << " = " << state << "." << std::endl;
 }
 
-extern "C" void loglinevarchars(int line, char* name, char* state) {
+extern "C" void loglinevarbool(int line, char* name, bool state) {
+    std::cout << "Line " << line << ": " << name << " = " << state << "." << std::endl;
+}
+
+extern "C" void loglinevarchar(int line, char* name, char state) {
+    if (state == 1 || state == 0) {
+        loglinevarbool(line, name, state);
+        return;
+    }
+    std::cout << "Line " << line << ": " << name << " = " << state << "." << std::endl;
+}
+
+extern "C" void loglinevarstring(int line, char* name, char* state) {
     std::cout << "Line " << line << ": " << name << " = " << state << "." << std::endl;
 }
 
