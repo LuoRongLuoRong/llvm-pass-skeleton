@@ -33,7 +33,7 @@ clang++ -flegacy-pass-manager -O0 -g -fPIC -fno-discard-value-names -Xclang -loa
 
 # g++ main.o lst_timer.o http_conn.o log.o sql_connection_pool.o webserver.o config.o rtlib.o -lpthread -lmysqlclient 
 
-g++ -fPIC server.o rtlib.o -lpthread -lmysqlclient 
+g++ server.o rtlib.o -lpthread -lmysqlclient 
 
 # echo 'input a number:'
 ./a.out

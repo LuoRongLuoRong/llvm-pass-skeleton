@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/DerivedTypes.h"
 
 using namespace llvm;
 
@@ -147,15 +148,20 @@ namespace {
             Value *arg2 = op->getOperand(1);
             
             // for project
-            // if (arg2->getName().str() != "m_check_state") {
+            // if (arg2->getName().str() != "line_status") {
             //   continue;
             // }
+            if (arg2->getName().str() != "m_check_state") {
+              continue;
+            }
 
             errs() << "【" << I << "】" << "\n"; 
             errs() << *(arg1->getType()) << '\n';
             errs() << "StoreInst L: " << *arg1 << ": [" << arg1->getName() << "]\n";
             Type* value_ir_type = arg1->getType();
             if (value_ir_type->isIntegerTy()) {
+              log_line_var_int(op, B, logFuncInt, Ctx);
+              if (true) continue;
               unsigned int_bit_width = value_ir_type->getIntegerBitWidth();              
               errs() << "IntegerType" << int_bit_width << "\n";
               if (int_bit_width == 1) {
@@ -172,7 +178,8 @@ namespace {
                   } 
                 } 
                 else {
-                  // errs() << "ERROR: i8 无 int 值。\n";
+                  // TODO: errs() << "ERROR: i8 无 int 值。\n";
+                  // 此处将 bool 视为 char 的特殊情况。因为在未读取值的前提下，value 是未知的。
                   log_line_var_char(op, B, logFuncChar, Ctx);
                 }
               } 
@@ -184,8 +191,14 @@ namespace {
               }
             } 
             else if (value_ir_type->isPointerTy()) {
-              errs() << "PointerType" << "\n";
-              // log_line_var_int(op, B, logFuncString, Ctx);
+              PointerType* pt = dyn_cast<PointerType>(value_ir_type);
+              errs() << "!!! PointerType: " 
+                << pt->isAggregateType() << "; "
+                // <<  << "; "
+                << "\n";
+              // i8*
+
+              // log_line_var_string(op, B, logFuncString, Ctx);
             }
             else if (value_ir_type->isFloatTy()) {
               errs() << "FloatType" << "\n";
@@ -256,17 +269,21 @@ namespace {
       IRBuilder<> builder(inst);
       builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
-      // get right: name            
-      Value *arg2 = inst->getOperand(1);  
+      Value* arg1 = inst->getOperand(0);       
+      Value *arg2 = inst->getOperand(1);  // 可能并非变量的真实名称。
       errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
 
-      Value* argstr = builder.CreateGlobalString(arg2->getName());    
-      Value* argi = inst->getOperand(0);
-      Value* argline = getLine(inst, Ctx);
+      Value* argstr = builder.CreateGlobalString(arg2->getName());  // name
+      Value* argline = getLine(inst, Ctx);  // line
+      
+      // string value
+      // store i8* %0, i8** %result.ptr, align 8
+      Value* argi;  // TODO!
 
       Value* args[] = {argline, argstr, argi};  // 
       builder.CreateCall(logFunc, args);
     }
+
 
     void log_line_var(StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx) {
       IRBuilder<> builder(inst);
