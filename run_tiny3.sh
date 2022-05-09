@@ -11,9 +11,9 @@
 # test_file_name='test0add'
 # test_file_name='test1cout'
 
-src_dir='../../src/TinyWebServer'
+src_dir='/home/fdse/luorong/LLVM/test/llvm-pass-skeleton/TinyWebServer'
 pass_so_path='../../build/skeleton/libSkeletonPass.so'
-server_ll_path='../../src/TinyWebServer'
+server_ll_path='/home/fdse/luorong/LLVM/test/llvm-pass-skeleton/TinyWebServer'
 compilation_record_path='/home/fdse/luorong/LLVM/test/llvm-pass-skeleton/instrument/compilation_record'
 
 # script. -a ${compilation_record_path}

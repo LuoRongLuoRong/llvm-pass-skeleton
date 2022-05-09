@@ -14,6 +14,8 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/DerivedTypes.h"
 
+#include <iostream>
+
 using namespace llvm;
 
 namespace {  
@@ -161,7 +163,7 @@ namespace {
             Type* value_ir_type = arg1->getType();
             if (value_ir_type->isIntegerTy()) {
               log_line_var_int(op, B, logFuncInt, Ctx);
-              if (true) continue;
+//              if (true) continue;
               unsigned int_bit_width = value_ir_type->getIntegerBitWidth();              
               errs() << "IntegerType" << int_bit_width << "\n";
               if (int_bit_width == 1) {
@@ -209,7 +211,7 @@ namespace {
           }
         }
       }
-      
+      // 对源码进行修改返回 true
       return true;
     }
 
@@ -264,7 +266,13 @@ namespace {
       builder.CreateCall(logFunc, args);
     }
 
-    
+    /**
+     * 没有完成的函数
+     * @param inst
+     * @param B
+     * @param logFunc
+     * @param Ctx
+     */
     void log_line_var_string(StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx) {
       IRBuilder<> builder(inst);
       builder.SetInsertPoint(&B, ++builder.GetInsertPoint());

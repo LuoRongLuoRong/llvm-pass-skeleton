@@ -1,3 +1,4 @@
+# 指定 cmake 的最小版本
 cmake_minimum_required(VERSION 3.1)
 # 设定工程名和版本号
 project(Skeleton VERSION 1.0)
@@ -11,6 +12,9 @@ include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
 
 add_subdirectory(skeleton)  # Use your pass name here.
+add_subdirectory(instrument)
+add_subdirectory(src)
+add_subdirectory(TinyWebServer)
 
 ## for project TinyWebserver
 # add_subdirectory(src/TinyWebServer)

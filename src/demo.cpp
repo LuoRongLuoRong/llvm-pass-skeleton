@@ -56,6 +56,7 @@ int foo_int() {
 
 int main() {
     int state_int = foo_int();
+    std::cout << state_int << std::endl;
     // bool state_bool = foo_bool();
     // char state_char = foo_char();
     // std::string state_string = foo_string();

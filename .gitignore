@@ -4,3 +4,5 @@ build
 *.tmp
 *.ll
 *.bc
+cmake-build-debug/
+
