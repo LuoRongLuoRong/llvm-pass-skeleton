@@ -161,7 +161,6 @@ namespace {
             Type* value_ir_type = arg1->getType();
             if (value_ir_type->isIntegerTy()) {
               log_int(filename, op, B, logFuncInt, Ctx);
-              test();
 
               if (true) continue;
               unsigned int_bit_width = value_ir_type->getIntegerBitWidth();              
@@ -214,8 +213,6 @@ namespace {
       return true;
     }
 
-void test() {
-    }
     /****************** instrumented functions *******************/
 
     void log_int(std::string filename, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx) {
@@ -225,19 +222,21 @@ void test() {
       // get right: name
       Value* arg2 = inst->getOperand(1);
       errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
-      errs() << *arg2 << "\n";
       Value* argfilename = builder.CreateGlobalString(filename);
       Value* argstr = builder.CreateGlobalString(arg2->getName());
-      Value* argi = inst->getOperand(0);
-      if (auto *callins = dyn_cast<CallInst>(argi)) {
-        Value* v = callins->getCalledOperandUse();
-        errs() << "  CALL: " << *v << "\n";
-      }
-      Value* argline = getLine(inst, Ctx);
+      Value* argi = inst->getOperand(0);  // state
+      Value* argline = getLine(inst, Ctx);  //
 
       // LoadInst (Type *Ty, Value *Ptr, const Twine &NameStr, Instruction *InsertBefore)
       LoadInst* loadInst = new LoadInst(arg2->getType(), arg2, arg2->getName(), inst);
       Value* argold = dyn_cast_or_null<Value>(loadInst);
+
+      errs() << "   arg2 的 Use 的数目" << arg2->getNumUses() << "\n";
+      // 如果前面q
+      for (Value::use_iterator U = arg2->use_begin(); U != arg2->use_end(); ++U) {
+        errs() << "   arg2 的 Use：" << *(U->getUser()) << "\n";
+        errs() << "        " << (U->getUser() == inst) << "\n";
+      }
 
       Value* args[] = {argfilename, argline, argstr, argi, argold};  //
       builder.CreateCall(logFunc, args);
@@ -251,7 +250,6 @@ void test() {
       // get right: name
       Value* arg2 = inst->getPointerOperand();
       errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
-      errs() << *arg2 << "\n";
 
       Value* argstr = builder.CreateGlobalString(arg2->getName());
       Value* argline = getLine(inst, Ctx);

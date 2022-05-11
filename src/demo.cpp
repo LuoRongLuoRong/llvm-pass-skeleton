@@ -6,6 +6,7 @@ int foo_int() {
     state_int = 2;
     // ...
     std::cin >> state_int;
+    state_int = state_int + 1;
     return state_int;
 }
 
@@ -56,7 +57,6 @@ int foo_int() {
 
 int main() {
     int state_int = foo_int();
-    state_int = foo_int();
     // bool state_bool = foo_bool();
     // char state_char = foo_char();
     // std::string state_string = foo_string();
