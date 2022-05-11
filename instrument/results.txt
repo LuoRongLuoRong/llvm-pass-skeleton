@@ -1,6 +1,6 @@
 ../src/demo.cpp, 4, state_int, 0, 1
 ../src/demo.cpp, 6, state_int, 1, 2
-../src/demo.cpp, 58, state_int, 0, 36548
-../src/demo.cpp, 4, state_int, 21979, 1
+../src/demo.cpp, 58, state_int, 0, 78
+../src/demo.cpp, 4, state_int, 22020, 1
 ../src/demo.cpp, 6, state_int, 1, 2
-../src/demo.cpp, 59, state_int, 36548, 88789
+../src/demo.cpp, 59, state_int, 78, 98
