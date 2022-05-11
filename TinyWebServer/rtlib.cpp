@@ -3,9 +3,8 @@
 
 // useful function
 
-extern "C" void loglinevarint(int line, char* name, int state, int old_state) {
-  std::cout << "BEFORE: Line " << line << ": " << name << " = " << old_state << "." << std::endl;
-  std::cout << "AFTER:  Line " << line << ": " << name << " = " << state << "." << std::endl;
+extern "C" void loglinevarint(int line, char* name, int state) {
+    std::cout << "Line " << line << ": " << name << " = " << state << "." << std::endl;
 }
 
 extern "C" void loglinevarbool(int line, char* name, bool state) {

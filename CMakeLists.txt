@@ -11,13 +11,13 @@ add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
 
-add_subdirectory(skeleton)  # Use your pass name here.
-add_subdirectory(instrument)
-add_subdirectory(src)
-add_subdirectory(TinyWebServer)
+#add_subdirectory(instrument)
+add_subdirectory(readjson)
+#add_subdirectory(skeleton)  # Use your pass name here.
+#add_subdirectory(TinyWebServer)
+#add_subdirectory(src)
 
-## for project TinyWebserver
-# add_subdirectory(src/TinyWebServer)
+#target_compile_definitions()
 
 # 将库文件链接到可执行程序上
 # target_link_libraries(ServerLR SkeletonPass)

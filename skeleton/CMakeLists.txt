@@ -1,4 +1,5 @@
-add_library(SkeletonPass MODULE
+
+add_library(SkeletonPass SHARED
     # List your source files here.
     Skeleton.cpp
 )

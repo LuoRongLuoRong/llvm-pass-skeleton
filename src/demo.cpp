@@ -1,9 +1,9 @@
 #include <iostream>
 
 int foo_int() {
-    int state_int = 0;
+    int state_int = 1;
     // ...
-    state_int = 1;
+    state_int = 2;
     // ...
     std::cin >> state_int;
     return state_int;
@@ -56,7 +56,8 @@ int foo_int() {
 
 int main() {
     int state_int = foo_int();
-    std::cout << state_int << std::endl;
+
+    state_int = foo_int();
     // bool state_bool = foo_bool();
     // char state_char = foo_char();
     // std::string state_string = foo_string();

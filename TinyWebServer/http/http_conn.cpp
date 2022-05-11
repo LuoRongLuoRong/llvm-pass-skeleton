@@ -138,7 +138,9 @@ void http_conn::init()
     mysql = NULL;
     bytes_to_send = 0;
     bytes_have_send = 0;
+  std::cout << "m_check_state:" << m_check_state << std::endl;
     m_check_state = CHECK_STATE_REQUESTLINE;
+    std::cout << "m_check_state:" << m_check_state << std::endl;
     m_linger = false;
     m_method = GET;
     m_url = 0;
@@ -282,8 +284,10 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char *text)
     //当url为/时，显示判断界面
     if (strlen(m_url) == 1)
         strcat(m_url, "judge.html");
+  std::cout << "m_check_state[288]:" << m_check_state << std::endl;
     m_check_state = CHECK_STATE_HEADER;
-    return NO_REQUEST;
+  std::cout << "m_check_state[288]:" << m_check_state << std::endl;
+  return NO_REQUEST;
 }
 
 //解析http请求的一个头部信息
@@ -293,8 +297,10 @@ http_conn::HTTP_CODE http_conn::parse_headers(char *text)
     {
         if (m_content_length != 0)
         {
+          std::cout << "m_check_state[301]:" << m_check_state << std::endl;
             m_check_state = CHECK_STATE_CONTENT;
-            return NO_REQUEST;
+          std::cout << "m_check_state[301]:" << m_check_state << "\n";
+          return NO_REQUEST;
         }
         return GET_REQUEST;
     }
@@ -341,13 +347,16 @@ http_conn::HTTP_CODE http_conn::parse_content(char *text)
 
 http_conn::HTTP_CODE http_conn::process_read()
 {
+  std::cout << "line_status[351]: <init>"  << "\n";
     LINE_STATUS line_status = LINE_OK;
+    std::cout << "line_status[351]:" << line_status << "\n";
     HTTP_CODE ret = NO_REQUEST;
     char *text = 0;
 
     while ((m_check_state == CHECK_STATE_CONTENT && line_status == LINE_OK) || ((line_status = parse_line()) == LINE_OK))
     {
-        text = get_line();
+      std::cout << "line_status[356]:" << line_status << "\n";
+      text = get_line();
         m_start_line = m_checked_idx;
         LOG_INFO("%s", text);
         switch (m_check_state)
@@ -375,8 +384,10 @@ http_conn::HTTP_CODE http_conn::process_read()
             ret = parse_content(text);
             if (ret == GET_REQUEST)
                 return do_request();
+          std::cout << "line_status[388]:" << line_status << "\n";
             line_status = LINE_OPEN;
-            break;
+          std::cout << "line_status[388]:" << line_status << "\n";
+          break;
         }
         default:
             return INTERNAL_ERROR;
