@@ -14,7 +14,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/DerivedTypes.h"
 
-#include "readjson/read_json.h"
+#include "readjson/read_json.cpp"
 
 using namespace llvm;
 
@@ -27,7 +27,8 @@ namespace {
     static char ID;
     SkeletonPass() : FunctionPass(ID) {}
 
-    StringRef getSourceName(Function &F) {
+    // 返回函数所在文件的路径
+    StringRef getFunctionSourceName(Function &F) {
       DISubprogram* DI = F.getSubprogram();
       if(!DI) {
         errs() << "Function " << F.getName() << " does not have a subprogram\n";
@@ -35,6 +36,21 @@ namespace {
       }
       return DI->getName();
     }
+
+      // 返回函数所在是文件的路径
+      StringRef getSourceName(Function &F) {
+        DISubprogram* DI = F.getSubprogram();
+        if (!DI) {
+          errs() << "Function " << F.getName() << " does not have a subprogram\n";
+          return F.getName();
+        }
+        DIFile* DIF = DI->getFile();
+        if (!DIF) {
+          errs() << "Function " << F.getName() << " does not have a file\n";
+        }
+        return DIF->getFilename();
+      }
+
     void printFunctionName(Function &F) {
       DISubprogram* DI = F.getSubprogram();
       if(!DI) {
@@ -51,6 +67,7 @@ namespace {
       errs() << "\n";
     }
 
+    // 获取的是 IR 中的临时变量而非 source code 中的 local variables
     void getLocalVariables(Function &F) {
       // not test yet
       ValueSymbolTable *vst = F.getValueSymbolTable();
@@ -65,13 +82,6 @@ namespace {
         }
       }
     }
-
-    void getFunSubprogram(Function &F) {
-      if (auto *subprogram = F.getSubprogram())
-        errs() << "Subprogram: " << subprogram->getLine() << "\n";
-      else
-        errs() << "has no subprogram" << "\n";
-    }
     
     // IR 指令在源代码中的行号
     Value* getLine(Instruction *inst, LLVMContext &Ctx) {
@@ -82,11 +92,15 @@ namespace {
     }
     
     virtual bool runOnFunction(Function &F) {
+      jsonutil ju;
       // 判断 filename 是否包含在 json 文件中
-      StringRef functionSourceName = getSourceName(F);
+      std::string filename = getSourceName(F).str();
       std::string jsonPath = "file_variable_line.json";
-      std::map<std::string, std::map<std::string, std::vector<int>>> mapFileVariable = readfile(jsonPath);
-      // 该文件不值得gf (!hasFile(mapFileVariable, functionSourceName.str())) {
+
+      std::map<std::string, std::map<std::string, std::vector<int>>> mapFileVariable = ju.readfile(jsonPath);
+
+      // 该文件不值得继续探索
+      if (!ju.hasFile(mapFileVariable, filename)) {
         return false;
       }
 
@@ -94,6 +108,7 @@ namespace {
       LLVMContext &Ctx = F.getContext();
       // 函数参数：
       std::vector<Type*> paramTypesInt = {
+        Type::getInt8PtrTy(Ctx),  // filename
         Type::getInt32Ty(Ctx),  // line
         Type::getInt8PtrTy(Ctx),  // name
         Type::getInt32Ty(Ctx),  // state
@@ -117,7 +132,7 @@ namespace {
       FunctionType *logFuncStringType = FunctionType::get(retType, paramTypesString, false);
       FunctionType *logFuncCharBoolType = FunctionType::get(retType, paramTypesCharBool, false);
       // 根据函数的名字获取该函数：
-      FunctionCallee logFuncInt = F.getParent()->getOrInsertFunction("loglinevarint", logFuncIntType);
+      FunctionCallee logFuncInt = F.getParent()->getOrInsertFunction("logint", logFuncIntType);
       FunctionCallee logFuncBool = F.getParent()->getOrInsertFunction("loglinevarbool", logFuncIntType);
       FunctionCallee logFuncChar = F.getParent()->getOrInsertFunction("loglinevarchar", logFuncIntType);
       FunctionCallee logFuncString = F.getParent()->getOrInsertFunction("loglinevarstring", logFuncIntType);
@@ -135,19 +150,18 @@ namespace {
             Value *arg1 = op->getOperand(0);  // %4 = xxx
             Value *arg2 = op->getOperand(1);
 
-            
-            // for project
-//            if (arg2->getName().str() != "line_status" &&
-//                arg2->getName().str() != "m_check_state") {
-//              continue;
-//            }
+            // 检查该变量是否存在
+            if (!ju.hasVariable(mapFileVariable, filename, arg2->getName().str())) {
+              continue;
+            }
 
             errs() << "【" << I << "】" << "\n"; 
             errs() << *(arg1->getType()) << '\n';
             errs() << "StoreInst L: " << *arg1 << ": [" << arg1->getName() << "]\n";
             Type* value_ir_type = arg1->getType();
             if (value_ir_type->isIntegerTy()) {
-              log_line_var_int(op, B, logFuncInt, Ctx);
+              log_int(filename, op, B, logFuncInt, Ctx);
+              test();
 
               if (true) continue;
               unsigned int_bit_width = value_ir_type->getIntegerBitWidth();              
@@ -200,9 +214,37 @@ namespace {
       return true;
     }
 
+void test() {
+    }
     /****************** instrumented functions *******************/
 
-    void log_line_var_int_load(LoadInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx) {
+    void log_int(std::string filename, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx) {
+      IRBuilder<> builder(inst);
+      builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
+
+      // get right: name
+      Value* arg2 = inst->getOperand(1);
+      errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
+      errs() << *arg2 << "\n";
+      Value* argfilename = builder.CreateGlobalString(filename);
+      Value* argstr = builder.CreateGlobalString(arg2->getName());
+      Value* argi = inst->getOperand(0);
+      if (auto *callins = dyn_cast<CallInst>(argi)) {
+        Value* v = callins->getCalledOperandUse();
+        errs() << "  CALL: " << *v << "\n";
+      }
+      Value* argline = getLine(inst, Ctx);
+
+      // LoadInst (Type *Ty, Value *Ptr, const Twine &NameStr, Instruction *InsertBefore)
+      LoadInst* loadInst = new LoadInst(arg2->getType(), arg2, arg2->getName(), inst);
+      Value* argold = dyn_cast_or_null<Value>(loadInst);
+
+      Value* args[] = {argfilename, argline, argstr, argi, argold};  //
+      builder.CreateCall(logFunc, args);
+    }
+
+
+      void log_line_var_int_load(LoadInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx) {
       IRBuilder<> builder(inst);
       builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
@@ -271,7 +313,7 @@ namespace {
         argold = dyn_cast_or_null<Value>(loadInst);
 //        argold = dyn_cast_or_null<Value>(arg2);
 
-        builder.CreateLoad(arg2, arg2->getName());
+//        builder.CreateLoad(arg2, arg2->getName());
       }
 
       Value* args[] = {argline, argstr, argi, argold};  //
@@ -434,6 +476,8 @@ namespace {
   };
 }
 
+
+// 注册 pass 并且自启动
 char SkeletonPass::ID = 0;
 
 // Automatically enable the pass.

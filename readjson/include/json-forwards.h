@@ -74,7 +74,7 @@ license you like.
 
 
 #ifndef JSON_FORWARD_AMALGAMATED_H_INCLUDED
-# define JSON_FORWARD_AMALGAMATED_H_INCLUDED
+#define JSON_FORWARD_AMALGAMATED_H_INCLUDED
 /// If defined, indicates that the source file is amalgamated
 /// to prevent private header inclusion.
 #define JSON_IS_AMALGAMATION

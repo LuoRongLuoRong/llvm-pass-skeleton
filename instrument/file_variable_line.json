@@ -1,0 +1,37 @@
+[
+    {
+        "filename": "http/http_conn.cpp",
+        "variables": [
+            {
+                "varname": "m_check_state",
+                "lines": [142, 288, 301]
+            },
+            {
+                "varname": "line_status",
+                "lines": [351, 356, 388]
+            }
+        ]
+    },
+    {
+        "filename": "http/http_conn2.cpp",
+        "variables": [
+            {
+                "varname": "m_check_state",
+                "lines": [142, 288, 301]
+            },
+            {
+                "varname": "line_status",
+                "lines": [351, 356, 388]
+            }
+        ]
+    },
+    {
+        "filename": "../src/demo.cpp",
+        "variables": [
+            {
+                "varname": "state_int",
+                "lines": [4,6,8,58,59]
+            },
+        ]
+    }
+]

@@ -56,7 +56,6 @@ int foo_int() {
 
 int main() {
     int state_int = foo_int();
-
     state_int = foo_int();
     // bool state_bool = foo_bool();
     // char state_char = foo_char();
