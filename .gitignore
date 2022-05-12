@@ -5,4 +5,5 @@ build
 *.ll
 *.bc
 cmake-build-debug/
+.idea/
 
