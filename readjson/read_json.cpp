@@ -41,7 +41,7 @@ std::map<std::string, std::map<std::string, std::vector<int>>> jsonutil::readfil
   Json::Value files;
   reader.parse(ifs, files);
 
-  std::cout << files << std::endl;
+//  std::cout << files << std::endl;
 
   std::map<std::string, std::map<std::string, std::vector<int>>> mapFileVariable;
   for (int i = 0; i < files.size(); ++i) {
@@ -54,6 +54,41 @@ std::map<std::string, std::map<std::string, std::vector<int>>> jsonutil::readfil
       mapVariableLines[files[i]["variables"][j]["varname"].asString()] = lines;
     }
     mapFileVariable[files[i]["filename"].asString()] = mapVariableLines;
+  }
+  return mapFileVariable;
+}
+
+std::map<std::string, std::map<std::string, std::vector<int>>> jsonutil::readSVsiteJson(std::string jsonPath) {
+  std::ifstream ifs(jsonPath);
+  Json::Reader reader;
+  Json::Value files;
+  reader.parse(ifs, files);
+
+  std::cout << files << std::endl;
+
+  std::map<std::string, std::map<std::string, std::vector<int>>> mapFileVariable;
+  // 读取 json 文件
+  for (int i = 0; i < files.size(); ++i) {
+    // {"LOC":"349","SV":"m_check_state","filepath":"http/http_conn.cpp"}
+    std::cout << ">>>>>> " << files[i]["LOC"] << std::endl;
+    int line = files[i]["LOC"].asInt();
+    std::string varname = files[i]["SV"].asString();
+    std::string filename = files[i]["filepath"].asString();
+
+    std::map<std::string, std::vector<int>> mapVariableLines;
+    if (mapFileVariable.find(filename) != mapFileVariable.end()) {
+      mapFileVariable[filename] = mapVariableLines;
+    } else {
+      mapVariableLines = mapFileVariable[filename];
+    }
+
+    std::vector<int> lines;
+    if (mapVariableLines.find(varname) != mapVariableLines.end()) {
+      mapVariableLines[varname] = lines;
+    } else {
+      lines = mapVariableLines[varname];
+    }
+    lines.push_back(line);
   }
   return mapFileVariable;
 }

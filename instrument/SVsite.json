@@ -1,0 +1,32 @@
+[
+  {
+    "LOC": 349,
+    "SV": "m_check_state",
+    "filepath": "http/http_conn.cpp"
+  },
+  {
+    "LOC": 141,
+    "SV": "m_check_state",
+    "filepath": "http/http_conn.cpp"
+  },
+  {
+    "LOC": 357,
+    "SV": "m_check_state",
+    "filepath": "http/http_conn.cpp"
+  },
+  {
+    "LOC": 285,
+    "SV": "m_check_state",
+    "filepath": "http/http_conn.cpp"
+  },
+  {
+    "LOC": 296,
+    "SV": "m_check_state",
+    "filepath": "http/http_conn.cpp"
+  },
+  {
+    "LOC": 4,
+    "SV": "state_int",
+    "filepath": "../src/demo.cpp"
+  }
+]

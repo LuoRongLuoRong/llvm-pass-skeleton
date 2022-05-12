@@ -24,8 +24,7 @@ public:
     bool hasVariable(std::map< std::string, std::map<std::string, std::vector<int>> > mapFileVariable, std::string filename, std::string key);
     bool hasFile(std::map< std::string, std::map<std::string, std::vector<int>> > mapFileVariable, std::string key);
     std::map<std::string, std::map<std::string, std::vector<int>>> readfile(std::string jsonPath);
-
-
+    std::map<std::string, std::map<std::string, std::vector<int>>> readSVsiteJson(std::string jsonPath);
 };
 
 #endif //SKELETON_READ_JSON_H

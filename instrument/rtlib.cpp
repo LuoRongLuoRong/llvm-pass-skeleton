@@ -11,7 +11,7 @@ extern "C" void write2file(char* filename, int line, char* name, int state, int 
   const char* END_LINE = "\n";
   std::ofstream ofs;  // 定义流对象
   ofs.open("results.txt",std::ios::out|std::ios::app);  // 以追加写的方式打开文件
-
+//  ofs << "write2file run!\n";
   ofs << filename << SEPARATOR
       << line << SEPARATOR
       << name << SEPARATOR
@@ -32,6 +32,10 @@ extern "C" void loglinevarint(int line, char* name, int state, int old_state) {
 
 extern "C" void logint(char* filename, int line, char* name, int state, int old_state) {
   loglinevarint(line, name, state, old_state);
+//  std::ofstream ofs;  // 定义流对象
+//  ofs.open("results.txt",std::ios::out|std::ios::app);
+//  ofs << "loglinevarint run!\n";
+//  ofs.close();
   write2file(filename, line, name, state, old_state);
 }
 

@@ -110,9 +110,10 @@ namespace
       jsonutil ju;
       // 判断 filename 是否包含在 json 文件中
       std::string filename = getSourceName(F).str();
-      std::string jsonPath = "file_variable_line.json";
+//      std::string jsonPath = "file_variable_line.json";
+      std::string jsonPath = "SVsite.json";
 
-      std::map<std::string, std::map<std::string, std::vector<int>>> mapFileVariable = ju.readfile(jsonPath);
+      std::map<std::string, std::map<std::string, std::vector<int>>> mapFileVariable = ju.readSVsiteJson(jsonPath);
 
       // 该文件不值得继续探索
       if (!ju.hasFile(mapFileVariable, filename))
@@ -169,11 +170,14 @@ namespace
             Value *arg1 = op->getOperand(0); // %4 = xxx
             Value *arg2 = op->getOperand(1);
 
+            errs() << "变量" << arg2->getName().str();
             // 检查该变量是否存在
             if (!ju.hasVariable(mapFileVariable, filename, arg2->getName().str()))
             {
               continue;
             }
+
+            errs() << "YES变量" << arg2->getName().str();
 
             errs() << "【" << I << "】"
                    << "\n";
@@ -322,6 +326,7 @@ namespace
       Value *args[] = {argfilename, argline, argstr, argi, argold}; //
       builder.CreateCall(logFunc, args);
     }
+
 
     void log_line_var_int_load(LoadInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
     {
@@ -512,8 +517,7 @@ namespace
       }
       else
       {
-        errs() << "store inst has no instance number"
-               << "\n";
+        errs() << "store inst has no instance number" << "\n";
       }
     }
 
