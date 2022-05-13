@@ -91,7 +91,7 @@ std::map<std::string, std::map<std::string, std::vector<int>>> jsonutil::readSVs
     // 更新 mapFileVariable
     mapFileVariable[filename] = mapVariableLines;
   }
-  printMapFileVariable(mapFileVariable);
+//  printMapFileVariable(mapFileVariable);
   return mapFileVariable;
 }
 
@@ -106,9 +106,66 @@ bool jsonutil::hasVariable(std::map<std::string, std::vector<int>> mapVariableLi
 }
 
 // 判断 variable 是否存在
-bool jsonutil::hasVariable(std::map< std::string, std::map<std::string, std::vector<int>> > mapFileVariable, std::string filename, std::string key) {
+bool jsonutil::hasVariable(std::map< std::string, std::map<std::string, std::vector<int>> > mapFileVariable,
+                           std::string filename, std::string key) {
   std::map<std::string, std::vector<int>> mapVariableLines = mapFileVariable[filename];
-  return mapVariableLines.end() != mapVariableLines.find(key);
+
+  // 由于 LLVM 的 IR 会在变量的名称后加数字
+  std::map<std::string, std::vector<int>> ::iterator it;
+  std::map<std::string, std::vector<int>> ::iterator itEnd;
+  it = mapVariableLines.begin();
+  itEnd = mapVariableLines.end();
+
+  while (it != itEnd){
+    std::string savedKey = it->first;
+    if (key.compare("m_check_state8") == 0) {
+      std::cout << savedKey << " " << key << " " << key.find(savedKey) << " " << savedKey.find(key) << "." << std::endl;
+    }
+    // key starts with prefix savedKey
+    if (key.find(savedKey) == 0) {
+      return true;
+    }
+    ++it;
+  }
+
+  return false;
+}
+
+// 返回 variable 的原始名称
+std::string jsonutil::getVarname(std::map< std::string, std::map<std::string, std::vector<int>> > mapFileVariable,
+                                 std::string filename, std::string key) {
+  std::map<std::string, std::vector<int>> mapVariableLines = mapFileVariable[filename];
+
+  // 由于 LLVM 的 IR 会在变量的名称后加数字
+  std::map<std::string, std::vector<int>> ::iterator it;
+  std::map<std::string, std::vector<int>> ::iterator itEnd;
+  it = mapVariableLines.begin();
+  itEnd = mapVariableLines.end();
+
+  while (it != itEnd){
+    std::string savedKey = it->first;
+    if (key.compare("m_check_state8") == 0) {
+      std::cout << savedKey << " " << key << " " << key.find(savedKey) << " " << savedKey.find(key) << "." << std::endl;
+    }
+    // key starts with prefix savedKey
+    if (key.find(savedKey) == 0) {
+      return savedKey;
+    }
+    ++it;
+  }
+
+  return key;
+}
+
+bool jsonutil::hasLine(std::vector<int> lines, int line) {
+  return std::find(lines.begin(), lines.end(), line) != lines.end();
+}
+
+bool jsonutil::hasLine(std::map< std::string, std::map<std::string, std::vector<int>> > mapFileVariable,
+                       std::string filename, std::string varname, int line) {
+  std::map<std::string, std::vector<int>> mapVariableLines = mapFileVariable[filename];
+  std::vector<int> lines = mapVariableLines[varname];
+  return std::find(lines.begin(), lines.end(), line) != lines.end();
 }
 
 void jsonutil::printMapFileVariable(std::map< std::string, std::map<std::string, std::vector<int>> > mapFileVariable) {

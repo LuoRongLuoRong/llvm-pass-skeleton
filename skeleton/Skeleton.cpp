@@ -35,7 +35,7 @@ namespace
       DISubprogram *DI = F.getSubprogram();
       if (!DI)
       {
-        errs() << "Function " << F.getName() << " does not have a subprogram\n";
+        // errs() << "Function " << F.getName() << " does not have a subprogram\n";
         return F.getName();
       }
       return DI->getName();
@@ -47,13 +47,13 @@ namespace
       DISubprogram *DI = F.getSubprogram();
       if (!DI)
       {
-        errs() << "Function " << F.getName() << " does not have a subprogram\n";
+        // errs() << "Function " << F.getName() << " does not have a subprogram\n";
         return F.getName();
       }
       DIFile *DIF = DI->getFile();
       if (!DIF)
       {
-        errs() << "Function " << F.getName() << " does not have a file\n";
+        // errs() << "Function " << F.getName() << " does not have a file\n";
       }
       return DIF->getFilename();
     }
@@ -63,17 +63,17 @@ namespace
       DISubprogram *DI = F.getSubprogram();
       if (!DI)
       {
-        errs() << "Function " << F.getName() << " does not have a subprogram\n";
+        // errs() << "Function " << F.getName() << " does not have a subprogram\n";
         return;
       }
       StringRef IRName = F.getName();
       StringRef SourceName = DI->getName();
       StringRef LinkageName = DI->getLinkageName();
 
-      errs() << "the ir name " << IRName << "\n";
-      errs() << "the source name is " << SourceName << "\n";
-      errs() << "the linkage name is " << LinkageName << "\n";
-      errs() << "\n";
+      // errs() << "the ir name " << IRName << "\n";
+      // errs() << "the source name is " << SourceName << "\n";
+      // errs() << "the linkage name is " << LinkageName << "\n";
+      // errs() << "\n";
     }
 
     // 获取的是 IR 中的临时变量而非 source code 中的 local variables
@@ -81,7 +81,7 @@ namespace
     {
       // not test yet
       ValueSymbolTable *vst = F.getValueSymbolTable();
-      errs() << (*vst).size() << "\n.";
+      // errs() << (*vst).size() << "\n.";
 
       for (ValueSymbolTable::iterator VI = vst->begin(), VE = vst->end(); VI != VE; ++VI)
       {
@@ -116,8 +116,7 @@ namespace
       std::map<std::string, std::map<std::string, std::vector<int>>> mapFileVariable = ju.readSVsiteJson(jsonPath);
 
       // 该文件不值得继续探索
-      if (!ju.hasFile(mapFileVariable, filename))
-      {
+      if (!ju.hasFile(mapFileVariable, filename)) {
         return false;
       }
 
@@ -154,83 +153,53 @@ namespace
       FunctionCallee logFuncChar = F.getParent()->getOrInsertFunction("loglinevarchar", logFuncIntType);
       FunctionCallee logFuncString = F.getParent()->getOrInsertFunction("loglinevarstring", logFuncIntType);
 
-      // errs() << "\n\n" << "Function: " << *(logFunc.getCallee()) << '\n';
-      // errs() << "" << "FUNC: " << F.getName() << '\n';
-      //       printFunctionName(F);
-      // getMDNodes(F);
-      // getFunSubprogram(F);
 
-      for (auto &B : F)
-      {
-        for (auto &I : B)
-        {
-          if (auto *op = dyn_cast<StoreInst>(&I))
-          {
+      for (auto &B : F) {
+        for (auto &I : B) {
+          if (!isa<StoreInst>(&I) && !isa<LoadInst>(&I)) {
+            continue;
+          }
+
+          if (auto *op = dyn_cast<LoadInst>(&I)) {
+            Value *arg2 = op->getOperand(0);
+
+            Value *argline = getLine(op, Ctx); //
+            int value = (dyn_cast<ConstantInt>(argline))->getSExtValue();
+
+//             errs() << "【" << I << "】" << "\n";
+//             errs() << *arg2 << "\n";
+//             errs() << arg2->getName() << ": " << value << "\n";
+
+            // 检查该变量是否存在
+            if (!ju.hasVariable(mapFileVariable, filename, arg2->getName().str())) {
+              continue;
+            }
+
+            std::string varname = ju.getVarname(mapFileVariable, filename, arg2->getName().str());
+            log_int_load(filename, varname, op, B, logFuncInt, Ctx);
+          }
+
+          if (auto *op = dyn_cast<StoreInst>(&I)) {
             // get left: value
             Value *arg1 = op->getOperand(0); // %4 = xxx
             Value *arg2 = op->getOperand(1);
 
-            errs() << "变量" << arg2->getName().str();
             // 检查该变量是否存在
-            if (!ju.hasVariable(mapFileVariable, filename, arg2->getName().str()))
-            {
+            if (!ju.hasVariable(mapFileVariable, filename, arg2->getName().str())) {
               continue;
             }
 
-            errs() << "YES变量" << arg2->getName().str();
-
-            errs() << "【" << I << "】"
-                   << "\n";
-            errs() << *(arg1->getType()) << '\n';
-            errs() << "StoreInst L: " << *arg1 << ": [" << arg1->getName() << "]\n";
+            // errs() << "【" << I << "】" << "\n";
+            // errs() << *(arg1->getType()) << '\n';
+            // errs() << "StoreInst L: " << *arg1 << ": [" << arg1->getName() << "]\n";
             Type *value_ir_type = arg1->getType();
-            if (value_ir_type->isIntegerTy())
-            {
-              log_int(filename, op, B, logFuncInt, Ctx);
-
-              if (true)
-                continue;
-              unsigned int_bit_width = value_ir_type->getIntegerBitWidth();
-              errs() << "IntegerType" << int_bit_width << "\n";
-              if (int_bit_width == 1)
-              {
-                log_line_var_bool(op, B, logFuncBool, Ctx);
-              }
-              else if (int_bit_width == 8)
-              {
-                // 1. bool
-                if (auto constant_int = dyn_cast<ConstantInt>(arg1))
-                {
-                  int value = constant_int->getSExtValue();
-                  if (value == 0 | value == 1)
-                  {
-                    log_line_var_bool(op, B, logFuncBool, Ctx);
-                  }
-                  else
-                  {
-                    log_line_var_char(op, B, logFuncChar, Ctx);
-                  }
-                }
-                else
-                {
-                  // TODO: errs() << "ERROR: i8 无 int 值。\n";
-                  // 此处将 bool 视为 char 的特殊情况。因为在未读取值的前提下，value 是未知的。
-                  log_line_var_char(op, B, logFuncChar, Ctx);
-                }
-              }
-              else if (int_bit_width == 32)
-              {
-                log_line_var_int(op, B, logFuncInt, Ctx);
-              }
-              else
-              {
-                errs() << "ERROR: integer 无归属。\n";
-              }
+            if (value_ir_type->isIntegerTy()) {
+              log_int_store(filename, op, B, logFuncInt, Ctx);
             }
             else if (value_ir_type->isPointerTy())
             {
               PointerType *pt = dyn_cast<PointerType>(value_ir_type);
-              //              errs() << "!!! PointerType: "
+              //              // errs() << "!!! PointerType: "
               //                << pt->isAggregateType() << "; "
               //                << "\n";
               // i8*
@@ -239,13 +208,11 @@ namespace
             }
             else if (value_ir_type->isFloatTy())
             {
-              errs() << "FloatType"
-                     << "\n";
+              // errs() << "FloatType" << "\n";
             }
             else if (value_ir_type->isDoubleTy())
             {
-              errs() << "DoubleType"
-                     << "\n";
+              // errs() << "DoubleType" << "\n";
             }
           }
         }
@@ -256,21 +223,36 @@ namespace
 
     /****************** instrumented functions *******************/
 
-    void log_int(std::string filename, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
+    void log_int_load(std::string filename, std::string varname, LoadInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx) {
+      IRBuilder<> builder(inst);
+      builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
+
+      Value *arg = inst->getOperand(0);  // 大概率是一个 alloca
+
+      Value *argfilename = builder.CreateGlobalString(filename);
+      Value *argstr = builder.CreateGlobalString(varname);
+      Value *argvalue = dyn_cast_or_null<Value>(inst);// state
+      Value *argline = getLine(inst, Ctx); //
+
+      Value *args[] = {argfilename, argline, argstr, argvalue, argvalue}; //
+      builder.CreateCall(logFunc, args);
+    }
+
+    void log_int_store(std::string filename, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
     {
       IRBuilder<> builder(inst);
       builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
       // get right: name
       Value *arg2 = inst->getOperand(1);
-      errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
+      // errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
       Value *argfilename = builder.CreateGlobalString(filename);
       Value *argstr = builder.CreateGlobalString(arg2->getName());
       Value *argi = inst->getOperand(0);   // state
       Value *argline = getLine(inst, Ctx); //
 
       Value *argold;
-      errs() << "   arg2 的 Use 的数目" << arg2->getNumUses() << "\n";
+      // errs() << "   arg2 的 Use 的数目" << arg2->getNumUses() << "\n";
 
       Value::use_iterator U = arg2->use_begin();
 
@@ -290,293 +272,30 @@ namespace
         }
         ++U; // 跳过 inst
 
-        while (U != arg2->use_end())
-        {
+        while (U != arg2->use_end()) {
           // 之前已经被使用过了
-          if (isa<StoreInst>(U->getUser()))
-          {
+          if (isa<StoreInst>(U->getUser())) {
             isInitial = false;
-            errs() << "之前已经被" << inst << "使用过了" << U->getUser() << " >>> Use：" << *(U->getUser()) << "\n";
+            // errs() << "之前已经被" << inst << "使用过了" << U->getUser() << " >>> Use：" << *(U->getUser()) << "\n";
 
             break;
           }
           ++U;
-          errs() << "  U->getUser() == inst: " << (U->getUser() == inst) << "\n";
+          // errs() << "  U->getUser() == inst: " << (U->getUser() == inst) << "\n";
         }
         break;
       } while (true);
 
-
-      for (U = arg2->use_begin(); U != arg2->use_end(); ++U)
-      {
-        errs() << " >>> Use：" << *(U->getUser()) << "\n";
-      }
-
-      if (isInitial)
-      {
+      if (isInitial) {
         // 未被初始化
         argold = ConstantInt::get(Type::getInt32Ty(Ctx), -1);
       }
-      else
-      {
+      else {
         LoadInst *loadInst = new LoadInst(arg2->getType(), arg2, arg2->getName(), inst);
         argold = dyn_cast_or_null<Value>(loadInst);
       }
 
       Value *args[] = {argfilename, argline, argstr, argi, argold}; //
-      builder.CreateCall(logFunc, args);
-    }
-
-
-    void log_line_var_int_load(LoadInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
-    {
-      IRBuilder<> builder(inst);
-      builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
-
-      // get right: name
-      Value *arg2 = inst->getPointerOperand();
-      errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
-
-      Value *argstr = builder.CreateGlobalString(arg2->getName());
-      Value *argline = getLine(inst, Ctx);
-
-      Value *args[] = {argline, argstr, dyn_cast_or_null<Value>(inst), dyn_cast_or_null<Value>(inst)}; //
-      builder.CreateCall(logFunc, args);
-    }
-
-    void log_line_var_int(StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
-    {
-      IRBuilder<> builder(inst);
-      builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
-
-      // get right: name
-      Value *arg2 = inst->getOperand(1);
-      errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
-      errs() << *arg2 << "\n";
-
-      Value *argstr = builder.CreateGlobalString(arg2->getName());
-      Value *argi = inst->getOperand(0);
-      if (auto *callins = dyn_cast<CallInst>(argi))
-      {
-        Value *v = callins->getCalledOperandUse();
-        errs() << "  CALL: " << *v << "\n";
-      }
-      Value *argline = getLine(inst, Ctx);
-      // store i32 0, i32* %state_int, align 4, !dbg !859
-
-      // 获取指令运行之前值
-      //      Value* argold;
-      //      if (auto alloca = dyn_cast<AllocaInst>(arg2)) {
-      //        for (auto user: alloca->users()) {
-      //          // %4 = load i32, i32* %3, align 4
-      //          // store i32 1, i32* %3, align 4
-      //          errs() << " User:" << *user << "\n";
-      //          if (auto store = dyn_cast<StoreInst>(user)) {
-      //            if (auto constant_int = dyn_cast<ConstantInt>(store->getOperand(0))) {
-      //              int number = constant_int->getSExtValue();
-      //              errs() << number << "***\n";
-      //              argold = constant_int;
-      //              break;
-      //            } else {  // 外界输入，动态获取
-      //              errs() << "外界输入，动态获取\n.";
-      //              argold  = ConstantInt::get(Type::getInt32Ty(Ctx), 555);
-      //            }
-      //          } else {
-      //            argold = ConstantInt::get(Type::getInt32Ty(Ctx), 9999);  // 初始化
-      //          }
-      //        }
-      //      } else {
-      //        argold = ConstantInt::get(Type::getInt32Ty(Ctx), 9999999);  // 初始化
-      //      }
-
-      Value *argold;
-      if (arg2->use_empty())
-      {
-        argold = ConstantInt::get(Type::getInt32Ty(Ctx), 999);
-      }
-      else
-      {
-        // LoadInst (Type *Ty, Value *Ptr, const Twine &NameStr, Instruction *InsertBefore)
-        LoadInst *loadInst = new LoadInst(arg2->getType(), arg2, arg2->getName(), inst);
-        argold = dyn_cast_or_null<Value>(loadInst);
-        //        argold = dyn_cast_or_null<Value>(arg2);
-
-        //        builder.CreateLoad(arg2, arg2->getName());
-      }
-
-      Value *args[] = {argline, argstr, argi, argold}; //
-      builder.CreateCall(logFunc, args);
-    }
-
-    void log_line_var_bool(StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
-    {
-      IRBuilder<> builder(inst);
-      builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
-
-      // get right: name
-      Value *arg2 = inst->getOperand(1);
-      errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
-
-      Value *argstr = builder.CreateGlobalString(arg2->getName());
-      Value *argi = inst->getOperand(0);
-      Value *argline = getLine(inst, Ctx);
-
-      Value *args[] = {argline, argstr, argi}; //
-      builder.CreateCall(logFunc, args);
-    }
-
-    void log_line_var_char(StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
-    {
-      IRBuilder<> builder(inst);
-      builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
-
-      // get right: name
-      Value *arg2 = inst->getOperand(1);
-      errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
-
-      Value *argstr = builder.CreateGlobalString(arg2->getName());
-      Value *argi = inst->getOperand(0);
-      Value *argline = getLine(inst, Ctx);
-
-      Value *args[] = {argline, argstr, argi}; //
-      builder.CreateCall(logFunc, args);
-    }
-
-    /**
-     * 没有完成的函数
-     * @param inst
-     * @param B
-     * @param logFunc
-     * @param Ctx
-     */
-    void log_line_var_string(StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
-    {
-      IRBuilder<> builder(inst);
-      builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
-
-      Value *arg1 = inst->getOperand(0);
-      Value *arg2 = inst->getOperand(1); // 可能并非变量的真实名称。
-      errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
-
-      Value *argstr = builder.CreateGlobalString(arg2->getName()); // name
-      Value *argline = getLine(inst, Ctx);                         // line
-
-      // string value
-      // store i8* %0, i8** %result.ptr, align 8
-      Value *argi; // TODO!
-
-      Value *args[] = {argline, argstr, argi}; //
-      builder.CreateCall(logFunc, args);
-    }
-
-    void log_line_var(StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
-    {
-      IRBuilder<> builder(inst);
-      builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
-
-      // get right: name
-      Value *arg2 = inst->getOperand(1);
-      errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
-
-      Value *argstr = builder.CreateGlobalString(arg2->getName());
-      Value *argline = getLine(inst, Ctx);
-
-      Value *argi = inst->getOperand(0);
-
-      Value *args[] = {argline, argstr, argi}; //
-      builder.CreateCall(logFunc, args);
-    }
-
-    void log_line_var_old(StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
-    {
-      IRBuilder<> builder(inst);
-      builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
-
-      // get right: name
-      Value *arg2 = inst->getOperand(1); // %2 = xxx
-      Instruction *arg2ins = dyn_cast<Instruction>(arg2);
-      while (arg2ins->getOpcode() != Instruction::Alloca)
-      {
-        // errs() << "        R: " << *arg2ins << "\n";
-        arg2ins = dyn_cast<Instruction>(arg2ins->getOperand(1));
-      }
-      errs() << "StoreInst R: " << *arg2ins << ": [" << arg2ins->getName() << "]\n";
-      Value *argstr = builder.CreateGlobalString(arg2ins->getName());
-
-      Value *argi = inst->getOperand(0); // left
-
-      // argline
-
-      Value *argline = getLine(inst, Ctx);
-
-      Value *args[] = {argline, argstr, argi}; //
-      builder.CreateCall(logFunc, args);
-      if (auto constant_int = dyn_cast<ConstantInt>(argi))
-      {
-        errs() << "store inst has instance number" << constant_int << "\n";
-      }
-      else
-      {
-        errs() << "store inst has no instance number" << "\n";
-      }
-    }
-
-    void logvar(StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
-    {
-      IRBuilder<> builder(inst);
-      builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
-
-      // get right: name
-      Value *arg2 = inst->getOperand(1); // %2 = xxx
-      Instruction *arg2ins = dyn_cast<Instruction>(arg2);
-      while (arg2ins->getOpcode() != Instruction::Alloca)
-      {
-        // errs() << "        R: " << *arg2ins << "\n";
-        arg2ins = dyn_cast<Instruction>(arg2ins->getOperand(1));
-      }
-      errs() << "StoreInst R: " << *arg2ins << ": [" << arg2ins->getName() << "]\n";
-      Value *argstr = builder.CreateGlobalString(arg2ins->getName());
-
-      Value *argi = inst->getOperand(0); // left
-      Value *args[] = {argi, argstr};    //
-      builder.CreateCall(logFunc, args);
-      if (auto constant_int = dyn_cast<ConstantInt>(argi))
-      {
-        errs() << "store inst has instance number" << constant_int << "\n";
-      }
-      else
-      {
-        errs() << "store inst has no instance number"
-               << "\n";
-      }
-    }
-
-    // int and float function test
-    void logif(StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
-    {
-      IRBuilder<> builder(inst);
-      builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
-
-      Value *argi = inst->getOperand(0); // left
-      if (auto constant_int = dyn_cast<ConstantInt>(argi))
-      {
-        Value *argf = ConstantFP::get(Type::getFloatTy(Ctx), 1);
-        Value *args[] = {argi, argf}; //
-        builder.CreateCall(logFunc, args);
-      }
-      else
-      {
-        errs() << "store inst has no instance number"
-               << "\n";
-      }
-    }
-
-    void boComputed(BinaryOperator *op, BasicBlock &B, FunctionCallee logFunc)
-    {
-      IRBuilder<> builder(op);
-      builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
-
-      Value *args[] = {op};
       builder.CreateCall(logFunc, args);
     }
   };

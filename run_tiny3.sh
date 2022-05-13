@@ -4,12 +4,14 @@ server_ll_path='../../src/TinyWebServer'
 compilation_record_path='/home/fdse/luorong/LLVM/test/llvm-pass-skeleton/instrument/compilation_record'
 
 cd ./build
+rm -rf ./skeleton
 cmake ..
 make
 cd ../instrument/build
 
 rm ./a.out
 rm ./results.txt
+rm ./rtlib.o
 
 g++ -fPIC -c ../rtlib.cpp
 

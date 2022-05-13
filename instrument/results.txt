@@ -1,24 +1,8 @@
-loglinevarint run!
-write2file run!
 ../src/demo.cpp, 4, state_int, -1, 1
-loglinevarint run!
-write2file run!
 ../src/demo.cpp, 6, state_int, 1, 2
-loglinevarint run!
-write2file run!
-../src/demo.cpp, 9, state_int, 89, 90
-loglinevarint run!
-write2file run!
-../src/demo.cpp, 75, state_int, -1, 90
-loglinevarint run!
-write2file run!
+../src/demo.cpp, 9, state_int, 4, 4
+../src/demo.cpp, 58, state_int, -1, 4
 ../src/demo.cpp, 4, state_int, -1, 1
-loglinevarint run!
-write2file run!
 ../src/demo.cpp, 6, state_int, 1, 2
-loglinevarint run!
-write2file run!
-../src/demo.cpp, 9, state_int, 90, 91
-loglinevarint run!
-write2file run!
-../src/demo.cpp, 76, state_int, 90, 91
+../src/demo.cpp, 9, state_int, 6, 6
+../src/demo.cpp, 59, state_int, 4, 6
