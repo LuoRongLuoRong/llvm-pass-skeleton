@@ -6,12 +6,14 @@
 
 
 // write to file
-extern "C" void write2file(char* filename, int line, char* name, int state, int old_state) {
+extern "C" void write2file(char* filename, int line,
+    char* name, int state, int old_state) {
   const char* SEPARATOR = ", ";
   const char* END_LINE = "\n";
-  std::ofstream ofs;  // 定义流对象
-  ofs.open("results.txt",std::ios::out|std::ios::app);  // 以追加写的方式打开文件
-//  ofs << "write2file run!\n";
+  // 定义流对象
+  std::ofstream ofs;
+  // 以追加写的方式打开文件
+  ofs.open("results.txt",std::ios::out|std::ios::app);
   ofs << filename << SEPARATOR
       << line << SEPARATOR
       << name << SEPARATOR

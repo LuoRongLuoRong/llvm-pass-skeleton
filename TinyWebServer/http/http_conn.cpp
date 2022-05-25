@@ -282,7 +282,7 @@ http_conn::HTTP_CODE http_conn::parse_request_line(char *text)
   //当url为/时，显示判断界面
   if (strlen(m_url) == 1)
     strcat(m_url, "judge.html");
-  m_check_state = CHECK_STATE_HEADER;
+  m_check_state = CHECK_STATE_HEADER;  //解析http请求行
   return NO_REQUEST;
 }
 
@@ -292,7 +292,7 @@ http_conn::HTTP_CODE http_conn::parse_headers(char *text)
   if (text[0] == '\0')
   {
     if (m_content_length != 0)
-    {
+    { //解析http请求的一个头部信息
       m_check_state = CHECK_STATE_CONTENT;
       return NO_REQUEST;
     }
@@ -345,12 +345,12 @@ http_conn::HTTP_CODE http_conn::process_read()
   HTTP_CODE ret = NO_REQUEST;
   char *text = 0;
 
-  while ((m_check_state == CHECK_STATE_CONTENT && line_status == LINE_OK) || ((line_status = parse_line()) == LINE_OK))
-  {
+  while ((m_check_state == CHECK_STATE_CONTENT && line_status == LINE_OK) ||
+         ((line_status = parse_line()) == LINE_OK)) {
     text = get_line();
     m_start_line = m_checked_idx;
     LOG_INFO("%s", text);
-    switch (m_check_state)
+    switch (m_check_state)  // process_read
     {
       case CHECK_STATE_REQUESTLINE:
       {

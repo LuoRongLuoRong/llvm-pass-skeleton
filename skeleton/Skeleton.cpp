@@ -223,18 +223,19 @@ namespace
 
     /****************** instrumented functions *******************/
 
-    void log_int_load(std::string filename, std::string varname, LoadInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx) {
+    void log_int_load(std::string filename, std::string varname, LoadInst *inst,
+                      BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx) {
       IRBuilder<> builder(inst);
       builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
-      Value *arg = inst->getOperand(0);  // 大概率是一个 alloca
-
       Value *argfilename = builder.CreateGlobalString(filename);
       Value *argstr = builder.CreateGlobalString(varname);
-      Value *argvalue = dyn_cast_or_null<Value>(inst);// state
+      Value *argvalue = dyn_cast_or_null<Value>(inst); // state
       Value *argline = getLine(inst, Ctx); //
+      Value *argold = dyn_cast_or_null<Value>(inst);  // old state
 
-      Value *args[] = {argfilename, argline, argstr, argvalue, argvalue}; //
+      Value *args[] = {argfilename, argline, argstr, argvalue, argold};
+      // instrumentation
       builder.CreateCall(logFunc, args);
     }
 
