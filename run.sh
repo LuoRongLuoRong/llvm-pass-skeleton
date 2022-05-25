@@ -1,31 +1,15 @@
-# no blank when assign a value
-# pre_name='test1cout'
-
-# echo 'input test file name:'
-# read test_file_name
-# # if string is ""
-# if [ -z "$test_file_name" ]; then
-#   test_file_name=$pre_name
-# fi
-
-# test_file_name='test0add'
-test_file_name='demo'
-# test_file_name='test1cout'
-cd ./build
-cmake ..
-make
-cd ../instrument/
-
-# clear
+cd ./instrument/build
 rm ./a.out
-rm ./${test_file_name}.o
 rm ./results.txt
+rm ./rtlib.o
 
-g++ -c rtlib.cpp
-# clang++ -flegacy-pass-manager -O0 -g -fno-discard-value-names -Xclang -load -Xclang ../build/skeleton/libSkeletonPass.so -c ../src/$test_file_name.cpp
-clang++ -flegacy-pass-manager -O0 -g -fPIC -fno-discard-value-names -Xclang -load -Xclang ../build/skeleton/libSkeletonPass.so -c ../src/${test_file_name}.cpp
+g++ -fPIC -c ../rtlib.cpp
 
-g++ ${test_file_name}.o rtlib.o
+src_dir='../../TinyWebServer'
+pass_so_path='../../build/skeleton/libSkeletonPass.so'
 
-echo 'input a number:'
+clang++ -flegacy-pass-manager -O0 -g -fPIC -fno-discard-value-names -Xclang -load -Xclang ${pass_so_path} -c ${src_dir}/server.ll
+
+g++ server.o rtlib.o -lpthread -lmysqlclient 
+
 ./a.out

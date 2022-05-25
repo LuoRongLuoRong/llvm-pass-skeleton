@@ -1,20 +1,16 @@
 #include "llvm/Pass.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/LegacyPassManager.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/ValueSymbolTable.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/DerivedTypes.h"
 
-#include "readjson/read_json.cpp"
+#include "../readjson/read_json.cpp"
 
 using namespace llvm;
 
@@ -23,23 +19,9 @@ namespace
   // 继承自 FunctionPass
   struct SkeletonPass : public FunctionPass
   {
-    // 一些自定义的全局变量
-    // ...
 
     static char ID;
     SkeletonPass() : FunctionPass(ID) {}
-
-    // 返回函数所在文件的路径
-    StringRef getFunctionSourceName(Function &F)
-    {
-      DISubprogram *DI = F.getSubprogram();
-      if (!DI)
-      {
-        // errs() << "Function " << F.getName() << " does not have a subprogram\n";
-        return F.getName();
-      }
-      return DI->getName();
-    }
 
     // 返回函数所在是文件的路径
     StringRef getSourceName(Function &F)
@@ -58,43 +40,6 @@ namespace
       return DIF->getFilename();
     }
 
-    void printFunctionName(Function &F)
-    {
-      DISubprogram *DI = F.getSubprogram();
-      if (!DI)
-      {
-        // errs() << "Function " << F.getName() << " does not have a subprogram\n";
-        return;
-      }
-      StringRef IRName = F.getName();
-      StringRef SourceName = DI->getName();
-      StringRef LinkageName = DI->getLinkageName();
-
-      // errs() << "the ir name " << IRName << "\n";
-      // errs() << "the source name is " << SourceName << "\n";
-      // errs() << "the linkage name is " << LinkageName << "\n";
-      // errs() << "\n";
-    }
-
-    // 获取的是 IR 中的临时变量而非 source code 中的 local variables
-    void getLocalVariables(Function &F)
-    {
-      // not test yet
-      ValueSymbolTable *vst = F.getValueSymbolTable();
-      // errs() << (*vst).size() << "\n.";
-
-      for (ValueSymbolTable::iterator VI = vst->begin(), VE = vst->end(); VI != VE; ++VI)
-      {
-        Value *V = VI->getValue();
-        if (!isa<GlobalValue>(V) || cast<GlobalValue>(V)->hasLocalLinkage())
-        {
-          if (!V->getName().startswith("llvm.dbg"))
-            // Set name to "", removing from symbol table!
-            V->setName("");
-        }
-      }
-    }
-
     // IR 指令在源代码中的行号
     Value *getLine(Instruction *inst, LLVMContext &Ctx)
     {
@@ -110,7 +55,6 @@ namespace
       jsonutil ju;
       // 判断 filename 是否包含在 json 文件中
       std::string filename = getSourceName(F).str();
-//      std::string jsonPath = "file_variable_line.json";
       std::string jsonPath = "SVsite.json";
 
       std::map<std::string, std::map<std::string, std::vector<int>>> mapFileVariable = ju.readSVsiteJson(jsonPath);
@@ -145,14 +89,8 @@ namespace
       Type *retType = Type::getVoidTy(Ctx);
       // 函数类型：
       FunctionType *logFuncIntType = FunctionType::get(retType, paramTypesInt, false);
-      FunctionType *logFuncStringType = FunctionType::get(retType, paramTypesString, false);
-      FunctionType *logFuncCharBoolType = FunctionType::get(retType, paramTypesCharBool, false);
       // 根据函数的名字获取该函数：
       FunctionCallee logFuncInt = F.getParent()->getOrInsertFunction("logint", logFuncIntType);
-      FunctionCallee logFuncBool = F.getParent()->getOrInsertFunction("loglinevarbool", logFuncIntType);
-      FunctionCallee logFuncChar = F.getParent()->getOrInsertFunction("loglinevarchar", logFuncIntType);
-      FunctionCallee logFuncString = F.getParent()->getOrInsertFunction("loglinevarstring", logFuncIntType);
-
 
       for (auto &B : F) {
         for (auto &I : B) {
@@ -164,11 +102,6 @@ namespace
             Value *arg2 = op->getOperand(0);
 
             Value *argline = getLine(op, Ctx); //
-            int value = (dyn_cast<ConstantInt>(argline))->getSExtValue();
-
-//             errs() << "【" << I << "】" << "\n";
-//             errs() << *arg2 << "\n";
-//             errs() << arg2->getName() << ": " << value << "\n";
 
             // 检查该变量是否存在
             if (!ju.hasVariable(mapFileVariable, filename, arg2->getName().str())) {
@@ -189,9 +122,6 @@ namespace
               continue;
             }
 
-            // errs() << "【" << I << "】" << "\n";
-            // errs() << *(arg1->getType()) << '\n';
-            // errs() << "StoreInst L: " << *arg1 << ": [" << arg1->getName() << "]\n";
             Type *value_ir_type = arg1->getType();
             if (value_ir_type->isIntegerTy()) {
               log_int_store(filename, op, B, logFuncInt, Ctx);

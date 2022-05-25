@@ -41,8 +41,6 @@ std::map<std::string, std::map<std::string, std::vector<int>>> jsonutil::readfil
   Json::Value files;
   reader.parse(ifs, files);
 
-//  std::cout << files << std::endl;
-
   std::map<std::string, std::map<std::string, std::vector<int>>> mapFileVariable;
   for (int i = 0; i < files.size(); ++i) {
     std::map<std::string, std::vector<int>> mapVariableLines;
@@ -64,32 +62,36 @@ std::map<std::string, std::map<std::string, std::vector<int>>> jsonutil::readSVs
   Json::Value files;
   reader.parse(ifs, files);
 
-  std::cout << files << std::endl;
-
   std::map<std::string, std::map<std::string, std::vector<int>>> mapFileVariable;
   // 读取 json 文件
   for (int i = 0; i < files.size(); ++i) {
-    // {"LOC":"349","SV":"m_check_state","filepath":"http/http_conn.cpp"}
-    std::cout << ">>>>>> " << files[i]["LOC"] << std::endl;
+//    "LOC": 349,
+//    "SV": "m_check_state",
+//    "filepath": "http/http_conn.cpp"
+
     int line = files[i]["LOC"].asInt();
     std::string varname = files[i]["SV"].asString();
     std::string filename = files[i]["filepath"].asString();
 
     std::map<std::string, std::vector<int>> mapVariableLines;
     if (mapFileVariable.find(filename) != mapFileVariable.end()) {
-      mapFileVariable[filename] = mapVariableLines;
-    } else {
       mapVariableLines = mapFileVariable[filename];
     }
 
     std::vector<int> lines;
     if (mapVariableLines.find(varname) != mapVariableLines.end()) {
-      mapVariableLines[varname] = lines;
-    } else {
       lines = mapVariableLines[varname];
     }
+    // 更新 lines
     lines.push_back(line);
+
+    // 更新 mapVariableLines
+    mapVariableLines[varname] = lines;
+
+    // 更新 mapFileVariable
+    mapFileVariable[filename] = mapVariableLines;
   }
+//  printMapFileVariable(mapFileVariable);
   return mapFileVariable;
 }
 
@@ -104,10 +106,86 @@ bool jsonutil::hasVariable(std::map<std::string, std::vector<int>> mapVariableLi
 }
 
 // 判断 variable 是否存在
-bool jsonutil::hasVariable(std::map< std::string, std::map<std::string, std::vector<int>> > mapFileVariable, std::string filename, std::string key) {
+bool jsonutil::hasVariable(std::map< std::string, std::map<std::string, std::vector<int>> > mapFileVariable,
+                           std::string filename, std::string key) {
   std::map<std::string, std::vector<int>> mapVariableLines = mapFileVariable[filename];
-  return mapVariableLines.end() != mapVariableLines.find(key);
+
+  // 由于 LLVM 的 IR 会在变量的名称后加数字
+  std::map<std::string, std::vector<int>> ::iterator it;
+  std::map<std::string, std::vector<int>> ::iterator itEnd;
+  it = mapVariableLines.begin();
+  itEnd = mapVariableLines.end();
+
+  while (it != itEnd){
+    std::string savedKey = it->first;
+    if (key.compare("m_check_state8") == 0) {
+      std::cout << savedKey << " " << key << " " << key.find(savedKey) << " " << savedKey.find(key) << "." << std::endl;
+    }
+    // key starts with prefix savedKey
+    if (key.find(savedKey) == 0) {
+      return true;
+    }
+    ++it;
+  }
+
+  return false;
 }
 
+// 返回 variable 的原始名称
+std::string jsonutil::getVarname(std::map< std::string, std::map<std::string, std::vector<int>> > mapFileVariable,
+                                 std::string filename, std::string key) {
+  std::map<std::string, std::vector<int>> mapVariableLines = mapFileVariable[filename];
 
-/** writer **/
+  // 由于 LLVM 的 IR 会在变量的名称后加数字
+  std::map<std::string, std::vector<int>> ::iterator it;
+  std::map<std::string, std::vector<int>> ::iterator itEnd;
+  it = mapVariableLines.begin();
+  itEnd = mapVariableLines.end();
+
+  while (it != itEnd){
+    std::string savedKey = it->first;
+    // key starts with prefix savedKey
+    if (key.find(savedKey) == 0) {
+      return savedKey;
+    }
+    ++it;
+  }
+
+  return key;
+}
+
+bool jsonutil::hasLine(std::vector<int> lines, int line) {
+  return std::find(lines.begin(), lines.end(), line) != lines.end();
+}
+
+bool jsonutil::hasLine(std::map< std::string, std::map<std::string, std::vector<int>> > mapFileVariable,
+                       std::string filename, std::string varname, int line) {
+  std::map<std::string, std::vector<int>> mapVariableLines = mapFileVariable[filename];
+  std::vector<int> lines = mapVariableLines[varname];
+  return std::find(lines.begin(), lines.end(), line) != lines.end();
+}
+
+void jsonutil::printMapFileVariable(std::map< std::string, std::map<std::string, std::vector<int>> > mapFileVariable) {
+  std::map < std::string, std::map<std::string, std::vector<int>> > ::iterator it;
+  std::map < std::string, std::map<std::string, std::vector<int>> > ::iterator itEnd;
+  it = mapFileVariable.begin();
+  itEnd = mapFileVariable.end();
+  while (it != itEnd){
+    std::cout << "\n" << it->first << ": ";
+
+    std::map<std::string, std::vector<int>> mapVariableLines = it->second;
+    std::map<std::string, std::vector<int>> ::iterator itv;
+    std::map<std::string, std::vector<int>> ::iterator itEndv;
+    itv = mapVariableLines.begin();
+    itEndv = mapVariableLines.end();
+    while (itv != itEndv){
+      std::cout << "\n\t" << itv->first;
+      std::vector<int> lines = itv->second;
+      for (auto line : lines)
+        std::cout << line << ' ';
+      ++itv;
+    }
+
+    ++it;
+  }
+}

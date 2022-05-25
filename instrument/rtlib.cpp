@@ -24,7 +24,7 @@ extern "C" void write2file(char* filename, int line,
 }
 
 
-// useful function
+// instrumented function
 
 extern "C" void loglinevarint(int line, char* name, int state, int old_state) {
   //  文件名，行号，变量，时间，前值，后值
@@ -33,11 +33,7 @@ extern "C" void loglinevarint(int line, char* name, int state, int old_state) {
 }
 
 extern "C" void logint(char* filename, int line, char* name, int state, int old_state) {
-  loglinevarint(line, name, state, old_state);
-//  std::ofstream ofs;  // 定义流对象
-//  ofs.open("results.txt",std::ios::out|std::ios::app);
-//  ofs << "loglinevarint run!\n";
-//  ofs.close();
+//  loglinevarint(line, name, state, old_state);
   write2file(filename, line, name, state, old_state);
 }
 
@@ -55,22 +51,4 @@ extern "C" void loglinevarchar(int line, char* name, char state) {
 
 extern "C" void loglinevarstring(int line, char* name, char* state) {
     std::cout << "Line " << line << ": " << name << " = " << state << "." << std::endl;
-}
-
-// useless function
-
-extern "C" void logop(int i) {
-    std::cout << "computed:  " << i << std::endl;
-}
-
-extern "C" void logvar(int i, char* name) {
-    std::cout << "Num: " << i << "; Name: " << name << std::endl;
-}
-
-extern "C" void logif(int i, float f) {
-    std::cout << "Num: " << i << "; Float: " << f << std::endl;
-}
-
-extern "C" void testArgs(int i, float f, std::string name) {
-    std::cout << "Num: " << i << "; " << f << "; Name: " << name << std::endl;
 }
