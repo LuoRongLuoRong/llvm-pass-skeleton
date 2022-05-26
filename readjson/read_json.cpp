@@ -118,9 +118,6 @@ bool jsonutil::hasVariable(std::map< std::string, std::map<std::string, std::vec
 
   while (it != itEnd){
     std::string savedKey = it->first;
-    if (key.compare("m_check_state8") == 0) {
-      std::cout << savedKey << " " << key << " " << key.find(savedKey) << " " << savedKey.find(key) << "." << std::endl;
-    }
     // key starts with prefix savedKey
     if (key.find(savedKey) == 0) {
       return true;

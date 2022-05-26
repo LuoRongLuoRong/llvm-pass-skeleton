@@ -7,18 +7,41 @@
 
 // write to file
 extern "C" void write2file(char* filename, int line,
-    char* name, int state, int old_state) {
+    char* name, int state, int old_state, int mode) {
   const char* SEPARATOR = ", ";
   const char* END_LINE = "\n";
+
   // 定义流对象
   std::ofstream ofs;
   // 以追加写的方式打开文件
   ofs.open("results.txt",std::ios::out|std::ios::app);
-  ofs << filename << SEPARATOR
-      << line << SEPARATOR
-      << name << SEPARATOR
-      << old_state << SEPARATOR
-      << state << END_LINE;
+
+  // 区分不同类型
+  switch (mode) {
+    case 0:
+      ofs << filename << SEPARATOR
+          << line << SEPARATOR
+          << name << SEPARATOR
+          << old_state << SEPARATOR
+          << state << END_LINE;
+      break;
+    case 1:
+      ofs << filename << SEPARATOR
+          << line << SEPARATOR
+          << name << SEPARATOR
+          << (bool)old_state << SEPARATOR
+          << (bool)state << END_LINE;
+      break;
+    case 2:
+      ofs << filename << SEPARATOR
+          << line << SEPARATOR
+          << name << SEPARATOR
+          << (char)old_state << SEPARATOR
+          << (char)state << END_LINE;
+      break;
+    default:
+      break;
+  }
 
   ofs.close();
 }
@@ -34,21 +57,23 @@ extern "C" void loglinevarint(int line, char* name, int state, int old_state) {
 
 extern "C" void logint(char* filename, int line, char* name, int state, int old_state) {
 //  loglinevarint(line, name, state, old_state);
-  write2file(filename, line, name, state, old_state);
+    write2file(filename, line, name, state, old_state, 0);
 }
 
-extern "C" void loglinevarbool(int line, char* name, bool state) {
+extern "C" void logbool(char* filename, int line, char* name, bool state, bool old_state) {
     std::cout << "Line " << line << ": " << name << " = " << state << "." << std::endl;
+    write2file(filename, line, name, state, old_state, 1);
 }
 
-extern "C" void loglinevarchar(int line, char* name, char state) {
+extern "C" void logchar(char* filename, int line, char* name, char state, char old_state) {
     if (state == 1 || state == 0) {
-        loglinevarbool(line, name, state);
+        logbool(filename, line, name, state, old_state);
         return;
     }
-    std::cout << "Line " << line << ": " << name << " = " << state << "." << std::endl;
+    write2file(filename, line, name, state, old_state, 2);
 }
 
-extern "C" void loglinevarstring(int line, char* name, char* state) {
+extern "C" void logstring(char* filename, int line, char* name, char* state, char* old_state) {
     std::cout << "Line " << line << ": " << name << " = " << state << "." << std::endl;
+//    write2file(filename, line, name, state, old_state, 3);
 }

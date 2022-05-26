@@ -1,4 +1,6 @@
-add_library(Rtlib STATIC rtlib.cpp)    # 静态库
+add_library(Rtlib STATIC
+        rtlib.cpp
+)    # 静态库
 
 # Use C++14 to compile our pass (i.e., supply -std=c++11).
 target_compile_features(Rtlib PRIVATE cxx_range_for cxx_auto_type)
