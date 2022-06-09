@@ -23,7 +23,7 @@ namespace
     static char ID;
     SkeletonPass() : FunctionPass(ID) {}
 
-    // 返回函数所在是文件的路径
+    // 返回函数所在是文件的路径+文件的名称
     StringRef getSourceName(Function &F)
     {
       DISubprogram *DI = F.getSubprogram();
@@ -75,22 +75,30 @@ namespace
           Type::getInt32Ty(Ctx)    // old_state
       };
       std::vector<Type *> paramTypesCharBool = {
+          Type::getInt8PtrTy(Ctx), // filename
           Type::getInt32Ty(Ctx),   // line
           Type::getInt8PtrTy(Ctx), // name
-          Type::getInt8Ty(Ctx)     // state
+          Type::getInt8Ty(Ctx),     // state
+          Type::getInt8Ty(Ctx)     // old_state
       };
-      std::vector<Type *> paramTypesString = {
-          Type::getInt32Ty(Ctx),   // line
-          Type::getInt8PtrTy(Ctx), // name
-          Type::getInt8PtrTy(Ctx)  // state
-          // Type::getFloatTy(Ctx)
-      };
+//      std::vector<Type *> paramTypesString = {
+//          Type::getInt8PtrTy(Ctx), // filename
+//          Type::getInt32Ty(Ctx),   // line
+//          Type::getInt8PtrTy(Ctx), // name
+//          Type::getInt8PtrTy(Ctx),  // state
+//          Type::getInt8PtrTy(Ctx)  // state
+//      };
       // 函数返回值：
       Type *retType = Type::getVoidTy(Ctx);
       // 函数类型：
       FunctionType *logFuncIntType = FunctionType::get(retType, paramTypesInt, false);
+      FunctionType *logFunCharBoolType = FunctionType::get(retType, paramTypesCharBool, false);
+//      FunctionType *logFuncStringType = FunctionType::get(retType, paramTypesString, false);
       // 根据函数的名字获取该函数：
       FunctionCallee logFuncInt = F.getParent()->getOrInsertFunction("logint", logFuncIntType);
+      FunctionCallee logFuncBool = F.getParent()->getOrInsertFunction("logbool", logFuncIntType);
+      FunctionCallee logFuncChar = F.getParent()->getOrInsertFunction("logchar", logFuncIntType);
+//      FunctionCallee logFuncString = F.getParent()->getOrInsertFunction("logstring", logFuncIntType);
 
       for (auto &B : F) {
         for (auto &I : B) {
@@ -100,8 +108,6 @@ namespace
 
           if (auto *op = dyn_cast<LoadInst>(&I)) {
             Value *arg2 = op->getOperand(0);
-
-            Value *argline = getLine(op, Ctx); //
 
             // 检查该变量是否存在
             if (!ju.hasVariable(mapFileVariable, filename, arg2->getName().str())) {
@@ -135,14 +141,6 @@ namespace
               // i8*
 
               // log_line_var_string(op, B, logFuncString, Ctx);
-            }
-            else if (value_ir_type->isFloatTy())
-            {
-              // errs() << "FloatType" << "\n";
-            }
-            else if (value_ir_type->isDoubleTy())
-            {
-              // errs() << "DoubleType" << "\n";
             }
           }
         }
@@ -214,8 +212,7 @@ namespace
           ++U;
           // errs() << "  U->getUser() == inst: " << (U->getUser() == inst) << "\n";
         }
-        break;
-      } while (true);
+      } while (false);
 
       if (isInitial) {
         // 未被初始化

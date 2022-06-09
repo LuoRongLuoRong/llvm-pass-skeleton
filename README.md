@@ -1,6 +1,6 @@
 # llvm-pass-skeleton
 
-基于 LLVM 13及以上版本。
+基于 LLVM 13 及以上版本。
 
 ## 运行方式
 （1）首先运行 build.sh；
