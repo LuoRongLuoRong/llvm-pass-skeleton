@@ -107,6 +107,10 @@ namespace
 
     virtual bool runOnFunction(Function &F)
     {
+      if (F.isIntrinsic()) {
+        return false;
+      }
+
       jsonutil ju;
       // 判断 filename 是否包含在 json 文件中
       std::string filename = getSourceName(F).str();
