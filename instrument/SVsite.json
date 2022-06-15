@@ -1,57 +1,50 @@
 [
-  {
-    "LOC": 349,
-    "SV": "m_check_state",
-    "filepath": "http/http_conn.cpp"
-  },
-  {
-    "LOC": 141,
-    "SV": "m_check_state",
-    "filepath": "http/http_conn.cpp"
-  },
-  {
-    "LOC": 357,
-    "SV": "m_check_state",
-    "filepath": "http/http_conn.cpp"
-  },
-  {
-    "LOC": 285,
-    "SV": "m_check_state",
-    "filepath": "http/http_conn.cpp"
-  },
-  {
-    "LOC": 296,
-    "SV": "m_check_state",
-    "filepath": "http/http_conn.cpp"
-  },
-  {
-    "LOC": 4,
-    "SV": "state_int",
-    "filepath": "../src/demo.cpp"
-  },
-  {
-    "LOC": 6,
-    "SV": "state_int",
-    "filepath": "../src/demo.cpp"
-  },
-  {
-    "LOC": 8,
-    "SV": "state_int",
-    "filepath": "../src/demo.cpp"
-  },
-  {
-    "LOC": 9,
-    "SV": "state_int",
-    "filepath": "../src/demo.cpp"
-  },
-  {
-    "LOC": 58,
-    "SV": "state_int",
-    "filepath": "../src/demo.cpp"
-  },
-  {
-    "LOC": 59,
-    "SV": "state_int",
-    "filepath": "../src/demo.cpp"
-  }
+    {
+        "LOC": 349,
+        "SV": "m_check_state",
+        "filepath": "http/http_conn.cpp",
+        "type": 0
+    },
+    {
+        "LOC": 141,
+        "SV": "m_check_state",
+        "filepath": "http/http_conn.cpp",
+        "type": 0
+    },
+    {
+        "LOC": 357,
+        "SV": "m_check_state",
+        "filepath": "http/http_conn.cpp",
+        "type": 0
+    },
+    {
+        "LOC": 285,
+        "SV": "m_check_state",
+        "filepath": "http/http_conn.cpp",
+        "type": 0
+    },
+    {
+        "LOC": 296,
+        "SV": "m_check_state",
+        "filepath": "http/http_conn.cpp",
+        "type": 0
+    },
+    {
+        "LOC": 345,
+        "SV": "line_status",
+        "filepath": "http/http_conn.cpp",
+        "type": 1
+    },
+    {
+        "LOC": 349,
+        "SV": "line_status",
+        "filepath": "http/http_conn.cpp",
+        "type": 1
+    },
+    {
+        "LOC": 382,
+        "SV": "line_status",
+        "filepath": "http/http_conn.cpp",
+        "type": 1
+    }
 ]

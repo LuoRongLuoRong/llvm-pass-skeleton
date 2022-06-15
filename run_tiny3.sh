@@ -20,4 +20,4 @@ clang++ -flegacy-pass-manager -O0 -g -fPIC -fno-discard-value-names -Xclang -loa
 
 g++ server.o rtlib.o -lpthread -lmysqlclient 
 
-# ./a.out
+./a.out

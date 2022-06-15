@@ -6,8 +6,7 @@
 
 
 // write to file
-extern "C" void write2file(char* filename, int line,
-    char* name, int state, int old_state) {
+extern "C" void write2file(char* filename, int line, char* name, int type, int state, int old_state) {
   const char* SEPARATOR = ", ";
   const char* END_LINE = "\n";
   // 定义流对象
@@ -17,6 +16,7 @@ extern "C" void write2file(char* filename, int line,
   ofs << filename << SEPARATOR
       << line << SEPARATOR
       << name << SEPARATOR
+      << type << SEPARATOR
       << old_state << SEPARATOR
       << state << END_LINE;
 
@@ -32,13 +32,13 @@ extern "C" void loglinevarint(int line, char* name, int state, int old_state) {
   std::cout << "AFTER:  Line " << line << ": " << name << " = " << state << "." << std::endl;
 }
 
-extern "C" void logint(char* filename, int line, char* name, int state, int old_state) {
+extern "C" void logint(char* filename, int line, char* name, int type, int state, int old_state) {
   loglinevarint(line, name, state, old_state);
 //  std::ofstream ofs;  // 定义流对象
 //  ofs.open("results.txt",std::ios::out|std::ios::app);
 //  ofs << "loglinevarint run!\n";
 //  ofs.close();
-  write2file(filename, line, name, state, old_state);
+  write2file(filename, line, name, type, state, old_state);
 }
 
 extern "C" void loglinevarbool(int line, char* name, bool state) {
