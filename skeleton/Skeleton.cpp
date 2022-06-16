@@ -22,14 +22,49 @@ using namespace llvm;
 class Skeleton : public PassInfoMixin<Skeleton>
 {
 public:
+  /* deal with input json file */
   JsonUtil ju;
 
+  /* functional function */
   StringRef getFilepath(Function &F);
-  FunctionCallee getCalleeInt(Function &F);
   Value *getLine(Instruction *inst, LLVMContext &Ctx);
+  int getLineNumber(Instruction *inst, LLVMContext &Ctx);
+  Value *getColumn(Instruction *inst, LLVMContext &Ctx);
+  int getColumnNumber(Instruction *inst, LLVMContext &Ctx);
+  bool isKeyOrStateVar(Instruction *op, LLVMContext &Ctx, std::string filename);
+  Variable getVariable(Instruction *svinst, LLVMContext &Ctx, std::string filename);
+
+  /* core function */
   bool runImpl(Function &F);
-  void log_int_store(std::string filename, StoreInst *inst, BasicBlock &B, Function &F);
+
+  /* for different data type */
+  FunctionCallee getCalleeInt(Function &F);
+
+  /* for different instructions */
+  void log_int_store(std::string filename, StoreInst *inst, BasicBlock &B, Function &F, Variable v);
+  void log_int_load(std::string filename, LoadInst *inst, BasicBlock &B, Function &F, Variable v);
 };
+
+Variable Skeleton::getVariable(Instruction *svinst, LLVMContext &Ctx, std::string filename)
+{
+  // 获取 Variable
+  int line = getLineNumber(svinst, Ctx);
+  int column = getColumnNumber(svinst, Ctx);
+  Variable v = ju.getVar(filename, line, column);
+  return v;
+}
+
+// 检查该变量是否是状态变量或者关键变量
+bool Skeleton::isKeyOrStateVar(Instruction *op, LLVMContext &Ctx, std::string filename)
+{
+  int line = getLineNumber(op, Ctx);
+  int column = getColumnNumber(op, Ctx);
+  if (line == 0 || column == 0 || !ju.hasVar(filename, line, column))
+  {
+    return false;
+  }
+  return ju.hasVar(filename, line, column);
+}
 
 FunctionCallee Skeleton::getCalleeInt(Function &F)
 {
@@ -73,16 +108,62 @@ StringRef Skeleton::getFilepath(Function &F)
 }
 
 // IR 指令在源代码中的行号
-Value *Skeleton::getLine(Instruction *inst, LLVMContext &Ctx)
+int Skeleton::getLineNumber(Instruction *inst, LLVMContext &Ctx)
 {
   if (DILocation *DILoc = inst->getDebugLoc())
   {
-    return ConstantInt::get(Type::getInt32Ty(Ctx), DILoc->getLine());
+    return DILoc->getLine();
   }
-  return ConstantInt::get(Type::getInt32Ty(Ctx), 0);
+  return 0;
 }
 
-void Skeleton::log_int_store(std::string filename, StoreInst *inst, BasicBlock &B, Function &F)
+// IR 指令在源代码中的行号的 Value
+Value *Skeleton::getLine(Instruction *inst, LLVMContext &Ctx)
+{
+  return ConstantInt::get(Type::getInt32Ty(Ctx), getLineNumber(inst, Ctx));
+}
+
+// IR 指令在源代码中的 Column
+int Skeleton::getColumnNumber(Instruction *inst, LLVMContext &Ctx)
+{
+  if (DILocation *DILoc = inst->getDebugLoc())
+  {
+    return DILoc->getColumn(); // here wrong
+  }
+  return 0;
+}
+
+// IR 指令在源代码中的 Column 的 Value
+Value *Skeleton::getColumn(Instruction *inst, LLVMContext &Ctx)
+{
+  return ConstantInt::get(Type::getInt32Ty(Ctx), getColumnNumber(inst, Ctx));
+}
+
+// 非侵入式插桩
+void Skeleton::log_int_load(std::string filename, LoadInst *inst, BasicBlock &B, Function &F, Variable v)
+{
+  // Get the function to call from our runtime library.
+  LLVMContext &Ctx = F.getContext();
+  // 创建运行时 Callee
+  FunctionCallee logFunc = getCalleeInt(F);
+  // 获取 IR 的插入点
+  IRBuilder<> builder(inst);
+  builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
+
+  // rtlib 函数: char* filename, int line, char* name, int type, int state, int old_state
+  Value *argfilename = builder.CreateGlobalString(filename);
+  Value *argline = getLine(inst, Ctx);               // line number
+  Value *argname = builder.CreateGlobalString(v.sv); // name
+  Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), v.type);
+  Value *argstate = dyn_cast_or_null<Value>(inst);    // state
+  Value *argoldstate = dyn_cast_or_null<Value>(inst); // old state
+
+  errs() << filename << ", " << v.line << ", " << v.column << ", " << argname << "\n";
+  Value *args[] = {argfilename, argline, argname, argtype, argstate, argoldstate};
+  builder.CreateCall(logFunc, args);
+}
+
+void Skeleton::log_int_store(std::string filename, StoreInst *inst, BasicBlock &B, Function &F, Variable v)
 {
   // Get the function to call from our runtime library.
   LLVMContext &Ctx = F.getContext();
@@ -93,19 +174,16 @@ void Skeleton::log_int_store(std::string filename, StoreInst *inst, BasicBlock &
   builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
   // get right: name
-  Value* arg2 = inst->getOperand(1);
-
-  std::string sv = arg2->getName().str();
-  int type = ju.getVar(filename, sv).type;
+  Value *arg2 = inst->getOperand(1);
 
   // errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
-  Value* argfilename = builder.CreateGlobalString(filename);
-  Value* argstr = builder.CreateGlobalString(sv);
-  Value* argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
-  Value* argi = inst->getOperand(0);   // state
-  Value* argline = getLine(inst, Ctx); //
-  
-  Value* argold;
+  Value *argfilename = builder.CreateGlobalString(filename);
+  Value *argname = builder.CreateGlobalString(v.sv);
+  Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), v.type);
+  Value *argstate = inst->getOperand(0); // state
+  Value *argline = getLine(inst, Ctx);   //
+
+  Value *argoldstate;
   // errs() << "   arg2 的 Use 的数目" << arg2->getNumUses() << "\n";
 
   Value::use_iterator U = arg2->use_begin();
@@ -147,16 +225,17 @@ void Skeleton::log_int_store(std::string filename, StoreInst *inst, BasicBlock &
 
   if (isInitial)
   {
-    // 未被初始化，赋值为 -1
-    argold = ConstantInt::get(Type::getInt32Ty(Ctx), -1);
+    // 未被初始化，赋值为 0
+    argoldstate = ConstantInt::get(Type::getInt32Ty(Ctx), 0);
   }
   else
   {
     LoadInst *loadInst = new LoadInst(arg2->getType(), arg2, arg2->getName(), inst);
-    argold = dyn_cast_or_null<Value>(loadInst);
+    argoldstate = dyn_cast_or_null<Value>(loadInst);
   }
 
-  Value *args[] = {argfilename, argline, argstr, argtype, argi, argold}; //
+  errs() << filename << ", " << v.line << ", " << v.column << ", " << argname << "\n";
+  Value *args[] = {argfilename, argline, argname, argtype, argstate, argoldstate};
   builder.CreateCall(logFunc, args);
 }
 
@@ -166,7 +245,7 @@ bool Skeleton::runImpl(Function &F)
 {
   // 检查文件名是否在关注的 filepaths 中
   std::string filename = getFilepath(F).str();
-  
+
   ju.save();
   if (!ju.inFilepaths(filename))
   {
@@ -187,38 +266,73 @@ bool Skeleton::runImpl(Function &F)
 
       if (auto *op = dyn_cast<LoadInst>(&I))
       {
-        Value *arg2 = op->getOperand(0);
-
-        Value *argline = getLine(op, Ctx); //
-        int value = (dyn_cast<ConstantInt>(argline))->getSExtValue();
-        // 检查该变量是否存在
-        if (!ju.hasVar(filename, arg2->getName().str()))
+        Value *arg1 = op->getOperand(0); 
+        Variable v;
+        // 如果不是关键变量或者状态变量，则 continue
+        if (auto *svinst = dyn_cast<GetElementPtrInst>(arg1))
+        {
+          if (!isKeyOrStateVar(svinst, Ctx, filename))
+          {
+            continue;
+          }
+          v = getVariable(svinst, Ctx, filename);
+        }
+        else if (auto *svinst = dyn_cast<LoadInst>(arg1))
+        {
+          if (!isKeyOrStateVar(svinst, Ctx, filename))
+          {
+            continue;
+          }
+          v = getVariable(svinst, Ctx, filename);
+        }
+        else
         {
           continue;
         }
 
-        // std::string varname = ju.getVar(filename, arg2->getName().str());
-        // log_int_load(filename, varname, op, B, logFuncInt, Ctx);
+        log_int_load(filename, op, B, F, v);
       }
-      if (auto *op = dyn_cast<StoreInst>(&I))
+
+      else if (auto *op = dyn_cast<StoreInst>(&I))
       {
         // get left: value
         Value *arg1 = op->getOperand(0); // %4 = xxx
         Value *arg2 = op->getOperand(1);
 
-        // 检查该变量是否存在
-        if (!ju.hasVar(filename, arg2->getName().str()))
+        Variable v;
+
+        // 判断变量是不是 keyOrStateValue
+        if (auto *svinst = dyn_cast<GetElementPtrInst>(arg2))
+        {
+          if (!isKeyOrStateVar(svinst, Ctx, filename))
+          {
+            continue;
+          }
+          v = getVariable(svinst, Ctx, filename);
+        }
+        else if (auto *svinst = dyn_cast<LoadInst>(arg2))
+        {
+          if (!isKeyOrStateVar(svinst, Ctx, filename))
+          {
+            continue;
+          }
+          v = getVariable(svinst, Ctx, filename);
+        }
+        else
         {
           continue;
         }
 
-        errs() << "【" << I << "】" << "\n";
-        errs() << *(arg1->getType()) << '\n';
-        errs() << "StoreInst L: " << *arg1 << ": [" << arg1->getName() << "]\n";
+        // errs() << "【" << I << "】"
+        //        << "\n";
+        // errs() << *(arg1->getType()) << '\n';
+        // errs() << "StoreInst L: " << *arg1 << ": [" << arg1->getName() << "]\n";
         Type *value_ir_type = arg1->getType();
+        std::cout << value_ir_type->isIntegerTy() << " " << v.sv << v.line << "震惊！ \n";
         if (value_ir_type->isIntegerTy())
         {
-          log_int_store(filename, op, B, F);
+
+          log_int_store(filename, op, B, F, v);
         }
         else if (value_ir_type->isPointerTy())
         {
@@ -244,8 +358,8 @@ bool Skeleton::runImpl(Function &F)
   return false;
 }
 
-
 /********************************  pass 的主体  *******************************/
+
 namespace
 {
   // 继承自 FunctionPass
@@ -255,7 +369,8 @@ namespace
     SkeletonPass() : FunctionPass(ID) {}
 
     virtual bool runOnFunction(Function &F)
-    { 
+    {
+      // return false;
       if (F.isIntrinsic())
       {
         return false;
@@ -267,6 +382,8 @@ namespace
     Skeleton Impl;
   };
 }
+
+/********************************  pass 的注册  *******************************/
 
 // 注册 pass 并且自启动
 char SkeletonPass::ID = 0;
