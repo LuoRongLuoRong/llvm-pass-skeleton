@@ -17,6 +17,7 @@
 class jsonutil
 {
 public:
+    std::map<std::string, int> mapSvType;
     std::vector<std::string> getFilenames(std::map< std::string, std::map<std::string, std::vector<int>> > mapFileVariable);
     std::vector<std::string> getVariables(std::map<std::string, std::vector<int>> mapVariableLines);
     std::vector<int> getVariableLines(std::map<std::string, std::vector<int>>mapVariableLines, std::string key);

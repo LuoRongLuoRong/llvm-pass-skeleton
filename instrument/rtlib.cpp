@@ -6,8 +6,7 @@
 
 
 // write to file
-extern "C" void write2file(char* filename, int line,
-    char* name, int state, int old_state, int mode) {
+extern "C" void write2file(char* filename, int line, char* name, int type, int state, int old_state, int mode) {
   const char* SEPARATOR = ", ";
   const char* END_LINE = "\n";
 
@@ -22,6 +21,7 @@ extern "C" void write2file(char* filename, int line,
       ofs << filename << SEPARATOR
           << line << SEPARATOR
           << name << SEPARATOR
+          << type << SEPARATOR
           << old_state << SEPARATOR
           << state << END_LINE;
       break;
@@ -29,6 +29,7 @@ extern "C" void write2file(char* filename, int line,
       ofs << filename << SEPARATOR
           << line << SEPARATOR
           << name << SEPARATOR
+          << type << SEPARATOR
           << (bool)old_state << SEPARATOR
           << (bool)state << END_LINE;
       break;
@@ -36,6 +37,7 @@ extern "C" void write2file(char* filename, int line,
       ofs << filename << SEPARATOR
           << line << SEPARATOR
           << name << SEPARATOR
+          << type << SEPARATOR
           << (char)old_state << SEPARATOR
           << (char)state << END_LINE;
       break;
@@ -55,25 +57,25 @@ extern "C" void loglinevarint(int line, char* name, int state, int old_state) {
   std::cout << "AFTER:  Line " << line << ": " << name << " = " << state << "." << std::endl;
 }
 
-extern "C" void logint(char* filename, int line, char* name, int state, int old_state) {
+extern "C" void logint(char* filename, int line, char* name, int type, int state, int old_state) {
 //  loglinevarint(line, name, state, old_state);
-    write2file(filename, line, name, state, old_state, 0);
+    write2file(filename, line, name, type, state, old_state, 0);
 }
 
-extern "C" void logbool(char* filename, int line, char* name, bool state, bool old_state) {
+extern "C" void logbool(char* filename, int line, char* name, int type, bool state, bool old_state) {
     std::cout << "Line " << line << ": " << name << " = " << state << "." << std::endl;
-    write2file(filename, line, name, state, old_state, 1);
+    write2file(filename, line, name, type, state, old_state, 1);
 }
 
-extern "C" void logchar(char* filename, int line, char* name, char state, char old_state) {
+extern "C" void logchar(char* filename, int line, char* name, int type, char state, char old_state) {
     if (state == 1 || state == 0) {
-        logbool(filename, line, name, state, old_state);
+        logbool(filename, line, name, type, state, old_state);
         return;
     }
-    write2file(filename, line, name, state, old_state, 2);
+    write2file(filename, line, name, type, state, old_state, 2);
 }
 
-extern "C" void logstring(char* filename, int line, char* name, char* state, char* old_state) {
+extern "C" void logstring(char* filename, int line, char* name, int type, char* state, char* old_state) {
     std::cout << "Line " << line << ": " << name << " = " << state << "." << std::endl;
 //    write2file(filename, line, name, state, old_state, 3);
 }

@@ -12,43 +12,81 @@
 
 #include "../readjson/read_json.cpp"
 
+#define MAX_INT (((unsigned int)(-1)) >> 1)
+
 using namespace llvm;
 
 namespace
 {
+
+  // 返回函数所在是文件的路径+文件的名称
+  StringRef getSourceName(Function &F)
+  {
+    DISubprogram *DI = F.getSubprogram();
+    if (!DI)
+    {
+      // errs() << "Function " << F.getName() << " does not have a subprogram\n";
+      return F.getName();
+    }
+    DIFile *DIF = DI->getFile();
+    if (!DIF)
+    {
+      // errs() << "Function " << F.getName() << " does not have a file\n";
+    }
+    return DIF->getFilename();
+  }
+
+  // IR 指令在源代码中的行号
+  Value *getLine(Instruction *inst, LLVMContext &Ctx)
+  {
+    if (DILocation *DILoc = inst->getDebugLoc())
+    {
+      return ConstantInt::get(Type::getInt32Ty(Ctx), DILoc->getLine());
+    }
+    return ConstantInt::get(Type::getInt32Ty(Ctx), 0);
+  }
+
+   FunctionCallee getLogFunc(LLVMContext &Ctx, Function &F, Type* stateType, std::string rtFuncName)
+  {
+    // 函数参数：
+    std::vector<Type *> paramTypes = {
+        Type::getInt8PtrTy(Ctx), // filename
+        Type::getInt32Ty(Ctx),   // line
+        Type::getInt8PtrTy(Ctx), // name
+        Type::getInt32Ty(Ctx),   // type
+        stateType,   // state
+        stateType   // old_state
+    };
+    // 函数返回值：
+    Type *retType = Type::getVoidTy(Ctx);
+    // 函数类型：
+    FunctionType *logFuncType = FunctionType::get(retType, paramTypes, false);
+    // 根据函数的名字获取该函数：
+    FunctionCallee logFunc = F.getParent()->getOrInsertFunction(rtFuncName, logFuncType);
+    return logFunc;
+  }
+
+  FunctionCallee getLogFuncInt(LLVMContext &Ctx, Function &F, int dataType)
+  {
+    switch (dataType)
+    {
+    case 1:  // bool
+      return getLogFunc(Ctx, F, Type::getInt8Ty(Ctx), "logbool");
+    case 2:  // char
+      return getLogFunc(Ctx, F, Type::getInt8Ty(Ctx), "logchar");
+    case 3:  // string
+      return getLogFunc(Ctx, F, Type::getInt8PtrTy(Ctx), "logstring");    
+    default: // 0: int
+      return getLogFunc(Ctx, F, Type::getInt32Ty(Ctx), "logint");
+    }
+  }
+
   // 继承自 FunctionPass
   struct SkeletonPass : public FunctionPass
   {
 
     static char ID;
     SkeletonPass() : FunctionPass(ID) {}
-
-    // 返回函数所在是文件的路径+文件的名称
-    StringRef getSourceName(Function &F)
-    {
-      DISubprogram *DI = F.getSubprogram();
-      if (!DI)
-      {
-        // errs() << "Function " << F.getName() << " does not have a subprogram\n";
-        return F.getName();
-      }
-      DIFile *DIF = DI->getFile();
-      if (!DIF)
-      {
-        // errs() << "Function " << F.getName() << " does not have a file\n";
-      }
-      return DIF->getFilename();
-    }
-
-    // IR 指令在源代码中的行号
-    Value *getLine(Instruction *inst, LLVMContext &Ctx)
-    {
-      if (DILocation *DILoc = inst->getDebugLoc())
-      {
-        return ConstantInt::get(Type::getInt32Ty(Ctx), DILoc->getLine());
-      }
-      return ConstantInt::get(Type::getInt32Ty(Ctx), 0);
-    }
 
     virtual bool runOnFunction(Function &F)
     {
@@ -60,7 +98,8 @@ namespace
       std::map<std::string, std::map<std::string, std::vector<int>>> mapFileVariable = ju.readSVsiteJson(jsonPath);
 
       // 该文件不值得继续探索
-      if (!ju.hasFile(mapFileVariable, filename)) {
+      if (!ju.hasFile(mapFileVariable, filename))
+      {
         return false;
       }
 
@@ -71,6 +110,7 @@ namespace
           Type::getInt8PtrTy(Ctx), // filename
           Type::getInt32Ty(Ctx),   // line
           Type::getInt8PtrTy(Ctx), // name
+          Type::getInt32Ty(Ctx),   // type
           Type::getInt32Ty(Ctx),   // state
           Type::getInt32Ty(Ctx)    // old_state
       };
@@ -78,59 +118,72 @@ namespace
           Type::getInt8PtrTy(Ctx), // filename
           Type::getInt32Ty(Ctx),   // line
           Type::getInt8PtrTy(Ctx), // name
-          Type::getInt8Ty(Ctx),     // state
+          Type::getInt8Ty(Ctx),    // state
           Type::getInt8Ty(Ctx)     // old_state
       };
-//      std::vector<Type *> paramTypesString = {
-//          Type::getInt8PtrTy(Ctx), // filename
-//          Type::getInt32Ty(Ctx),   // line
-//          Type::getInt8PtrTy(Ctx), // name
-//          Type::getInt8PtrTy(Ctx),  // state
-//          Type::getInt8PtrTy(Ctx)  // state
-//      };
+      //      std::vector<Type *> paramTypesString = {
+      //          Type::getInt8PtrTy(Ctx), // filename
+      //          Type::getInt32Ty(Ctx),   // line
+      //          Type::getInt8PtrTy(Ctx), // name
+      //          Type::getInt8PtrTy(Ctx),  // state
+      //          Type::getInt8PtrTy(Ctx)  // state
+      //      };
       // 函数返回值：
       Type *retType = Type::getVoidTy(Ctx);
       // 函数类型：
       FunctionType *logFuncIntType = FunctionType::get(retType, paramTypesInt, false);
       FunctionType *logFunCharBoolType = FunctionType::get(retType, paramTypesCharBool, false);
-//      FunctionType *logFuncStringType = FunctionType::get(retType, paramTypesString, false);
+      //      FunctionType *logFuncStringType = FunctionType::get(retType, paramTypesString, false);
       // 根据函数的名字获取该函数：
-      FunctionCallee logFuncInt = F.getParent()->getOrInsertFunction("logint", logFuncIntType);
+      FunctionCallee logFuncInt = getLogFuncInt(Ctx, F, 0);
       FunctionCallee logFuncBool = F.getParent()->getOrInsertFunction("logbool", logFuncIntType);
       FunctionCallee logFuncChar = F.getParent()->getOrInsertFunction("logchar", logFuncIntType);
-//      FunctionCallee logFuncString = F.getParent()->getOrInsertFunction("logstring", logFuncIntType);
+      //      FunctionCallee logFuncString = F.getParent()->getOrInsertFunction("logstring", logFuncIntType);
 
-      for (auto &B : F) {
-        for (auto &I : B) {
-          if (!isa<StoreInst>(&I) && !isa<LoadInst>(&I)) {
+      for (auto &B : F)
+      {
+        for (auto &I : B)
+        {
+          if (!isa<StoreInst>(&I) && !isa<LoadInst>(&I))
+          {
             continue;
           }
 
-          if (auto *op = dyn_cast<LoadInst>(&I)) {
+          if (auto *op = dyn_cast<LoadInst>(&I))
+          {
             Value *arg2 = op->getOperand(0);
 
             // 检查该变量是否存在
-            if (!ju.hasVariable(mapFileVariable, filename, arg2->getName().str())) {
+            if (!ju.hasVariable(mapFileVariable, filename, arg2->getName().str()))
+            {
               continue;
             }
 
             std::string varname = ju.getVarname(mapFileVariable, filename, arg2->getName().str());
-            log_int_load(filename, varname, op, B, logFuncInt, Ctx);
+            int type = ju.mapSvType[varname];
+            log_int_load(filename, varname, type, op, B, logFuncInt, Ctx);
           }
 
-          if (auto *op = dyn_cast<StoreInst>(&I)) {
+          if (auto *op = dyn_cast<StoreInst>(&I))
+          {
             // get left: value
             Value *arg1 = op->getOperand(0); // %4 = xxx
             Value *arg2 = op->getOperand(1);
 
             // 检查该变量是否存在
-            if (!ju.hasVariable(mapFileVariable, filename, arg2->getName().str())) {
+            if (!ju.hasVariable(mapFileVariable, filename, arg2->getName().str()))
+            {
               continue;
             }
 
             Type *value_ir_type = arg1->getType();
-            if (value_ir_type->isIntegerTy()) {
-              log_int_store(filename, op, B, logFuncInt, Ctx);
+            if (value_ir_type->isIntegerTy())
+            {
+              std::string varname = ju.getVarname(mapFileVariable, filename, arg2->getName().str());
+              int type = ju.mapSvType[varname];
+              log_int_store(filename, varname, type, op, B, logFuncInt, Ctx);
+
+              
             }
             else if (value_ir_type->isPointerTy())
             {
@@ -151,23 +204,25 @@ namespace
 
     /****************** instrumented functions *******************/
 
-    void log_int_load(std::string filename, std::string varname, LoadInst *inst,
-                      BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx) {
+    void log_int_load(std::string filename, std::string varname, int type, LoadInst *inst,
+                      BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
+    {
       IRBuilder<> builder(inst);
       builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
       Value *argfilename = builder.CreateGlobalString(filename);
       Value *argstr = builder.CreateGlobalString(varname);
+      Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
       Value *argvalue = dyn_cast_or_null<Value>(inst); // state
-      Value *argline = getLine(inst, Ctx); //
-      Value *argold = dyn_cast_or_null<Value>(inst);  // old state
+      Value *argline = getLine(inst, Ctx);             //
+      Value *argold = dyn_cast_or_null<Value>(inst);   // old state
 
-      Value *args[] = {argfilename, argline, argstr, argvalue, argold};
+      Value *args[] = {argfilename, argline, argstr, argtype, argvalue, argold};
       // instrumentation
       builder.CreateCall(logFunc, args);
     }
 
-    void log_int_store(std::string filename, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
+    void log_int_store(std::string filename, std::string varname, int type, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
     {
       IRBuilder<> builder(inst);
       builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
@@ -176,7 +231,8 @@ namespace
       Value *arg2 = inst->getOperand(1);
       // errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
       Value *argfilename = builder.CreateGlobalString(filename);
-      Value *argstr = builder.CreateGlobalString(arg2->getName());
+      Value *argstr = builder.CreateGlobalString(varname);
+      Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
       Value *argi = inst->getOperand(0);   // state
       Value *argline = getLine(inst, Ctx); //
 
@@ -186,9 +242,11 @@ namespace
       Value::use_iterator U = arg2->use_begin();
 
       bool isInitial = true;
-      do {
+      do
+      {
         // 1. 全局变量，直接 load
-        if (!isa<AllocaInst>(arg2)) {
+        if (!isa<AllocaInst>(arg2))
+        {
           isInitial = false;
           break;
         }
@@ -196,14 +254,17 @@ namespace
         // 循环终止的条件：（1）遇到本 instruction【说明是初始化】；（2）遇到结尾。
 
         // 只能倒序遍历，所以不得不出此下策
-        while (U->getUser() != inst) {
+        while (U->getUser() != inst)
+        {
           ++U;
         }
         ++U; // 跳过 inst
 
-        while (U != arg2->use_end()) {
+        while (U != arg2->use_end())
+        {
           // 之前已经被使用过了
-          if (isa<StoreInst>(U->getUser())) {
+          if (isa<StoreInst>(U->getUser()))
+          {
             isInitial = false;
             // errs() << "之前已经被" << inst << "使用过了" << U->getUser() << " >>> Use：" << *(U->getUser()) << "\n";
 
@@ -214,16 +275,18 @@ namespace
         }
       } while (false);
 
-      if (isInitial) {
+      if (isInitial)
+      {
         // 未被初始化
-        argold = ConstantInt::get(Type::getInt32Ty(Ctx), -1);
+        argold = ConstantInt::get(Type::getInt32Ty(Ctx), MAX_INT);
       }
-      else {
+      else
+      {
         LoadInst *loadInst = new LoadInst(arg2->getType(), arg2, arg2->getName(), inst);
         argold = dyn_cast_or_null<Value>(loadInst);
       }
 
-      Value *args[] = {argfilename, argline, argstr, argi, argold}; //
+      Value *args[] = {argfilename, argline, argstr, argtype, argi, argold}; //
       builder.CreateCall(logFunc, args);
     }
   };

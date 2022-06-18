@@ -69,7 +69,15 @@ std::map<std::string, std::map<std::string, std::vector<int>>> jsonutil::readSVs
 //    "SV": "m_check_state",
 //    "filepath": "http/http_conn.cpp"
 
-    int line = files[i]["LOC"].asInt();
+//  "SV": "line_status",
+//         "column": 82,
+//         "filepath": "http/http_conn.cpp",
+//         "line": 348,
+//         "type": 1
+
+    int line = files[i]["line"].asInt();
+    int column = files[i]["column"].asInt();
+    int type = files[i]["type"].asInt();
     std::string varname = files[i]["SV"].asString();
     std::string filename = files[i]["filepath"].asString();
 
@@ -90,6 +98,8 @@ std::map<std::string, std::map<std::string, std::vector<int>>> jsonutil::readSVs
 
     // 更新 mapFileVariable
     mapFileVariable[filename] = mapVariableLines;
+
+    mapSvType[varname] = type;
   }
 //  printMapFileVariable(mapFileVariable);
   return mapFileVariable;

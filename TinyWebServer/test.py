@@ -4,7 +4,7 @@ import time
 port = 9996
 reqs = [
     'POST /2CGISQL.cgi HTTP/1.1\r\nHost: 10.177.21.53:9996\r\nConnection: keep-alive\r\nContent-length:21\r\n\r\nuser=123&password=123',
-    # 'GET / HTTP/1.1\r\nHost:10.177.21.53:9996\r\nConnection:keep-alive\r\n\r\n',
+    'GET / HTTP/1.1\r\nHost:10.177.21.53:9996\r\nConnection:keep-alive\r\n\r\n',
 
 ]
 
@@ -20,3 +20,4 @@ def main():
         
 if __name__=='__main__':
     main()
+    
