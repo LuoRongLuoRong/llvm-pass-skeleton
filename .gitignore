@@ -6,4 +6,5 @@ build
 *.bc
 cmake-build-debug/
 .idea/
-
+TinyWebServer/
+src/TinyWebServer/
