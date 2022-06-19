@@ -4,6 +4,8 @@
 
 project (ReadJson)
 
+add_definitions("-fPIC")
+
 # Create a sources variable with a link to all cpp files to compile
 set(SOURCES
         src/jsoncpp.cpp

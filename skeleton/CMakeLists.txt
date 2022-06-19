@@ -4,6 +4,8 @@ add_library(SkeletonPass SHARED
     Skeleton.cpp
 )
 
+add_definitions("-fPIC")
+
 # Use C++14 to compile our pass (i.e., supply -std=c++11).
 target_compile_features(SkeletonPass PRIVATE cxx_range_for cxx_auto_type)
 

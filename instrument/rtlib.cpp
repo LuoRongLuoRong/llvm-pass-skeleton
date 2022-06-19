@@ -4,6 +4,7 @@
 #include <time.h>
 #include <fstream>//操作文件的头文件
 
+#define MAX_INT (((unsigned int)(-1)) >> 1)
 
 // write to file
 extern "C" void write2file(char* filename, int line, char* name, int type, int state, int old_state, int mode) {
@@ -34,6 +35,9 @@ extern "C" void write2file(char* filename, int line, char* name, int type, int s
           << (bool)state << END_LINE;
       break;
     case 2:
+      if (old_state > 123 || old_state < 48) {
+        old_state = '-';
+      }
       ofs << filename << SEPARATOR
           << line << SEPARATOR
           << name << SEPARATOR
