@@ -226,6 +226,7 @@ namespace
 
             std::string varname = ju.getVarname(mapFileVariable, filename, arg2->getName().str());
             int type = ju.mapSvType[varname];
+            
             log_int_load(filename, varname, type, op, B, logFuncInt, Ctx);
           }
 
