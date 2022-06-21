@@ -224,20 +224,20 @@ namespace
       APFloat apfloat_number = constant_fp->getValueAPF();
       // float number = constant_fp->getValueAPF();
       number = apfloat_number.convertToDouble();
-      errs() << "* number double is " << number << "\n";
+      // errs() << "* number double is " << number << "\n";
     } else {
       // int Value *argvalue = dyn_cast_or_null<Value>(inst); // state
-      errs() << "弄啥嘞\n";
+      // errs() << "弄啥嘞\n";
     }
 
-    errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
+    // errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
     Value *argfilename = builder.CreateGlobalString(filename);
     Value *argstr = builder.CreateGlobalString(varname);
     Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
     // Value *argi = ConstantFP::get(Type::getDoubleTy(Ctx), number); // state
     // 这儿不能使用 string，因为动态运行的时候，传过去的是这个 value
     Value *argi = arg1;
-    errs() << "? arg1=" << *argi << "\n";
+    // errs() << "? arg1=" << *argi << "\n";
     Value *argline = getLine(inst, Ctx);                           //
 
     Value *args[] = {argfilename, argline, argstr, argtype, argi, argi}; //
@@ -275,7 +275,7 @@ namespace
       jsonutil ju;
       // 判断 filename 是否包含在 json 文件中
       std::string filename = getSourceName(F).str();
-      std::string jsonPath = "SVsite.json";
+      std::string jsonPath = "../SVsite.json";
 
       std::map<std::string, std::map<std::string, std::vector<int>>> mapFileVariable = ju.readSVsiteJson(jsonPath);
 
@@ -304,27 +304,9 @@ namespace
             continue;
           }        
 
-          // if (!isa<StoreInst>(&I))
-          // {
-          //   continue;
-          // }
-
           if (auto *op = dyn_cast<LoadInst>(&I))
           {
             Value *arg1 = op->getOperand(0);
-
-            Value *val = arg1;
-            if (auto constant_int = dyn_cast<ConstantInt>(val))
-            {
-              int number = constant_int->getSExtValue();
-              errs() << "load" << number << ".\n";
-            }
-            else if (auto constant_fp = dyn_cast<ConstantFP>(val))
-            {
-              // float number = constant_fp->getValueAPF();
-              // errs() << number << ".\n";
-            }
-
             // 检查该变量是否存在
             if (!ju.hasVariable(mapFileVariable, filename, arg1->getName().str()))
             {
@@ -337,48 +319,21 @@ namespace
             Type *value_ir_type = op->getPointerOperandType()->getContainedType(0);
             if (value_ir_type->isIntegerTy())
             {
-              // store i32 1, i32* %i1, align 4, !dbg !896
-              // %6 = load i32, i32* %i1, align 4, !dbg !897
-
-              // Value *argvalue = dyn_cast_or_null<Value>(inst);
-
-              if (auto *constant_int = dyn_cast<ConstantInt>(arg1))
-              {
-                int number = constant_int->getSExtValue();
-                errs() << number << "\n";
-              }
               log_int_load(filename, varname, type, op, B, logFuncInt, Ctx);
             }
             else if (value_ir_type->isPointerTy())
             {
-              errs() << varname << " pointer"
-                     << "\n";
+              // pointer
             }
             else if (value_ir_type->isFloatTy())
             {
-              errs() << varname << " float"
-                     << "\n";
+              // float
               log_float_load(filename, varname, type, op, B, logFuncDouble, Ctx);
             }
             else if (value_ir_type->isDoubleTy())
             {
-              errs() << varname << " double"
-                     << "\n";
-              if (auto *constant_int = dyn_cast<ConstantInt>(arg1))
-              {
-                int number = constant_int->getSExtValue();
-
-                errs() << number << "\n";
-              }
+              // double
               log_double_load(filename, varname, type, op, B, logFuncDouble, Ctx);
-              // %0 = load float, float* %f, align 4, !dbg !862
-              // 获取 int 类型变量的值
-              // 通过 Value 进行强制类型转换成 ConstantFP
-              // ConstantInt *val = dyn_cast<ConstantInt>(arg1);
-              // auto* v = dyn_cast<ConstantFP>(arg1);
-              // 通过 getxxValue() 获取 float 值
-              // errs() << val->getZExtValue() << "\n";
-              // errs() << v->getValue() << "\n";
             }
             // int
           }
@@ -389,30 +344,11 @@ namespace
             Value *arg1 = op->getOperand(0); // %4 = xxx
             Value *arg2 = op->getOperand(1);
 
-            Value *val = op->getValueOperand();
-            if (auto constant_int = dyn_cast<ConstantInt>(val))
-            {
-              int number = constant_int->getSExtValue();
-              errs() << "store " << number << ".\n";
-            }
-            else if (auto constant_fp = dyn_cast<ConstantFP>(val))
-            {
-              // store float %conv1, float* %f, align 4, !dbg !864
-              // auto constant_fp = dyn_cast<ConstantFP>(arg1);
-              APFloat apfloat_number = constant_fp->getValueAPF();
-              // float number = constant_fp->getValueAPF();
-              double number = apfloat_number.convertToDouble();
-              float number_f = apfloat_number.convertToFloat();
-              // errs() << "【APFloat float】" << number << " " << number_f << ".\n";
-
-            } 
             // 检查该变量是否存在
             if (!ju.hasVariable(mapFileVariable, filename, arg2->getName().str()))
             {
               continue;
             }
-            
-            errs() << "\n>>> " << *op << "\n";
 
             std::string varname = ju.getVarname(mapFileVariable, filename, arg2->getName().str());
             int type = ju.mapSvType[varname];
@@ -423,7 +359,7 @@ namespace
               // log_int_store(filename, varname, type, op, B, logFuncInt, Ctx);
 
               unsigned int_bit_width = value_ir_type->getIntegerBitWidth();
-              errs() << "IntegerType" << int_bit_width << "\n";
+              // errs() << "IntegerType" << int_bit_width << "\n";
               if (int_bit_width == 1)
               {
                 log_int_store(filename, varname, type, op, B, logFuncBool, Ctx);
@@ -455,29 +391,23 @@ namespace
               }
               else
               {
-                errs() << "ERROR: integer 无归属。\n";
+                // errs() << "ERROR: integer 无归属。\n";
                 log_int_store(filename, varname, type, op, B, logFuncInt, Ctx);
               }
             }
             else if (value_ir_type->isPointerTy())
             {
-              PointerType *pt = dyn_cast<PointerType>(value_ir_type);
-              
-              //              // errs() << "!!! PointerType: "
-              //                << pt->isAggregateType() << "; "
-              //                << "\n";
-              // i8*
-
-              // log_line_var_string(op, B, logFuncString, Ctx);
+              // pointer
             }
             else if (value_ir_type->isFloatTy())
             {
-              // store float 2.000000e+00, float* %f, align 4, !dbg !860
+              // float
               // log_float_store(filename, varname, type, op, B, logFuncInt, Ctx);
             }
             else if (value_ir_type->isDoubleTy())
             {
-              log_double_store(filename, varname, type, op, B, logFuncInt, Ctx);
+              // double
+              // log_double_store(filename, varname, type, op, B, logFuncInt, Ctx);
             }
           }
         }

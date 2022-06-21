@@ -1,23 +1,19 @@
-## （1） 编译 LLVM Pass 文件
 cd ./build
-rm -rf ./skeleton
+rm -rf *
 cmake ..
 make
 
-cd ../instrument/build
-rm ./a.out
-rm ./results.txt
-rm ./rtlib.o
+rtlib_dir='../instrument'
+g++ -fPIC -c ${rtlib_dir}/rtlib.cpp
 
-g++ -fPIC -c ../rtlib.cpp
+src_dir='../TinyWebServer'
+pass_so_path='./skeleton/libSkeletonPass.so'
 
-src_dir='../../src'
-pass_so_path='../../build/skeleton/libSkeletonPass.so'
+clang++ -fPIC -flegacy-pass-manager -O0 -g -fno-discard-value-names -Xclang -load -Xclang ${pass_so_path} -c ${src_dir}/server.ll
 
-clang++ -fPIC -emit-llvm  -O0 -g -fno-discard-value-names -S -c ${src_dir}/demo.cpp -o ${src_dir}/demo.ll
+cd ../output
+build_src='../build'
+g++ -fPIC ${build_src}/server.o ${build_src}/rtlib.o -lpthread -lmysqlclient 
 
-clang++ -flegacy-pass-manager -O0 -g -fPIC -fno-discard-value-names -Xclang -load -Xclang ${pass_so_path} -c ${src_dir}/demo.ll
-
-g++ -fPIC demo.o rtlib.o
-
+echo 'You can run test_after_run.sh in a new terminal now.'
 ./a.out

@@ -1,0 +1,72 @@
+[
+    {
+        "SV": "m_check_state",
+        "column": 13,
+        "filepath": "http/http_conn.cpp",
+        "line": 348,
+        "type": 0
+    },
+    {
+        "SV": "m_check_state",
+        "column": 5,
+        "filepath": "http/http_conn.cpp",
+        "line": 141,
+        "type": 0
+    },
+    {
+        "SV": "m_check_state",
+        "column": 17,
+        "filepath": "http/http_conn.cpp",
+        "line": 353,
+        "type": 0
+    },
+    {
+        "SV": "m_check_state",
+        "column": 5,
+        "filepath": "http/http_conn.cpp",
+        "line": 285,
+        "type": 0
+    },
+    {
+        "SV": "m_check_state",
+        "column": 13,
+        "filepath": "http/http_conn.cpp",
+        "line": 296,
+        "type": 0
+    },
+    {
+        "SV": "line_status",
+        "column": 17,
+        "filepath": "http/http_conn.cpp",
+        "line": 344,
+        "type": 1
+    },
+    {
+        "SV": "line_status",
+        "column": 53,
+        "filepath": "http/http_conn.cpp",
+        "line": 348,
+        "type": 1
+    },
+    {
+        "SV": "line_status",
+        "column": 82,
+        "filepath": "http/http_conn.cpp",
+        "line": 348,
+        "type": 1
+    },
+    {
+        "SV": "line_status",
+        "column": 13,
+        "filepath": "http/http_conn.cpp",
+        "line": 378,
+        "type": 1
+    },
+    {
+        "SV": "line_status",
+        "column": 13,
+        "filepath": "http/http_conn.cpp",
+        "line": 378,
+        "type": 1
+    }
+]
