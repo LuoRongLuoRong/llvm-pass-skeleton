@@ -85,16 +85,18 @@ namespace
     }
   }
 
-  void getLocalVariables(Function &F) {
-      ValueSymbolTable *vst = F.getValueSymbolTable();
-      // errs() << "LocalVariables:" << vst << '\n';
-      for (auto vb = vst-> begin(); vb != vst->end(); vb++) {
-        std::list<Instruction*> useList;
-        Value* val = vb->second;
-        Instruction* inst = dyn_cast<Instruction>(val);
-        Type* type = val->getType();
-      }
+  void getLocalVariables(Function &F)
+  {
+    ValueSymbolTable *vst = F.getValueSymbolTable();
+    // errs() << "LocalVariables:" << vst << '\n';
+    for (auto vb = vst->begin(); vb != vst->end(); vb++)
+    {
+      std::list<Instruction *> useList;
+      Value *val = vb->second;
+      Instruction *inst = dyn_cast<Instruction>(val);
+      Type *type = val->getType();
     }
+  }
 
   /****************** instrumented functions *******************/
   /**    int    **/
@@ -225,7 +227,9 @@ namespace
       // float number = constant_fp->getValueAPF();
       number = apfloat_number.convertToDouble();
       // errs() << "* number double is " << number << "\n";
-    } else {
+    }
+    else
+    {
       // int Value *argvalue = dyn_cast_or_null<Value>(inst); // state
       // errs() << "弄啥嘞\n";
     }
@@ -238,7 +242,7 @@ namespace
     // 这儿不能使用 string，因为动态运行的时候，传过去的是这个 value
     Value *argi = arg1;
     // errs() << "? arg1=" << *argi << "\n";
-    Value *argline = getLine(inst, Ctx);                           //
+    Value *argline = getLine(inst, Ctx); //
 
     Value *args[] = {argfilename, argline, argstr, argtype, argi, argi}; //
     builder.CreateCall(logFunc, args);
@@ -255,7 +259,7 @@ namespace
     Value *argstr = builder.CreateGlobalString(varname);
     Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
     Value *argvalue = dyn_cast_or_null<Value>(inst); // state
-    Value *argline = getLine(inst, Ctx);             // 
+    Value *argline = getLine(inst, Ctx);             //
     Value *argold = dyn_cast_or_null<Value>(inst);   // old state
 
     Value *args[] = {argfilename, argline, argstr, argtype, argvalue, argold};
@@ -299,10 +303,11 @@ namespace
       {
         for (auto &I : B)
         {
+          errs() << I << '\n';
           if (!isa<StoreInst>(&I) && !isa<LoadInst>(&I))
           {
             continue;
-          }        
+          }
 
           if (auto *op = dyn_cast<LoadInst>(&I))
           {
@@ -344,6 +349,8 @@ namespace
             Value *arg1 = op->getOperand(0); // %4 = xxx
             Value *arg2 = op->getOperand(1);
 
+            errs() << *op << '\n';
+
             // 检查该变量是否存在
             if (!ju.hasVariable(mapFileVariable, filename, arg2->getName().str()))
             {
@@ -353,13 +360,31 @@ namespace
             std::string varname = ju.getVarname(mapFileVariable, filename, arg2->getName().str());
             int type = ju.mapSvType[varname];
 
+            Value *val = op->getValueOperand();
+            if (auto constant_int = dyn_cast<ConstantInt>(val))
+            {
+              int number = constant_int->getSExtValue();
+              errs() << "store " << number << ".\n";
+            }
+            else if (auto constant_fp = dyn_cast<ConstantFP>(val))
+            {
+              // store float %conv1, float* %f, align 4, !dbg !864
+              // auto constant_fp = dyn_cast<ConstantFP>(arg1);
+              APFloat apfloat_number = constant_fp->getValueAPF();
+              // float number = constant_fp->getValueAPF();
+              double number = apfloat_number.convertToDouble();
+              float number_f = apfloat_number.convertToFloat();
+              // errs() << "【APFloat float】" << number << " " << number_f << ".\n";
+            }
+
             Type *value_ir_type = arg1->getType();
+            // store i32 2, i32* %i1, align 4, !dbg !886
             if (value_ir_type->isIntegerTy())
             {
               // log_int_store(filename, varname, type, op, B, logFuncInt, Ctx);
 
               unsigned int_bit_width = value_ir_type->getIntegerBitWidth();
-              // errs() << "IntegerType" << int_bit_width << "\n";
+              errs() << "IntegerType" << int_bit_width << "\n";
               if (int_bit_width == 1)
               {
                 log_int_store(filename, varname, type, op, B, logFuncBool, Ctx);

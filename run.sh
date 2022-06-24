@@ -12,6 +12,9 @@ pass_so_path='./skeleton/libSkeletonPass.so'
 clang++ -fPIC -flegacy-pass-manager -O0 -g -fno-discard-value-names -Xclang -load -Xclang ${pass_so_path} -c ${src_dir}/server.ll
 
 cd ../output
+rm ./a.out
+rm ./results.txt
+
 build_src='../build'
 g++ -fPIC ${build_src}/server.o ${build_src}/rtlib.o -lpthread -lmysqlclient 
 
