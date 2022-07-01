@@ -29,13 +29,16 @@ int main() {
     // std::cout << s1 << std::endl;
 
 
-    char s2[4] = "asd"; 
+    // char s2[4] = "asd"; 
     // std::cin >> s2;
-    s2[0] = 'b';
+    // s2[0] = 'b';
     // std::cout << s2 << std::endl;
 
-    char* s3 = s2;
-    s3[1] = 'q';
-    
+
+    char* s3;
+    std::cin >> s3;
+    std::cout << s3 << std::endl;
+
     return 0;
 }
+ 

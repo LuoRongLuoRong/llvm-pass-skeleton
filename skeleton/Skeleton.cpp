@@ -312,6 +312,42 @@ namespace
   }
 
   /*    char asterisk    */
+
+  // TODO
+  bool hasBeenInitialized(Value *v, Value* inst, LLVMContext &Ctx) {
+
+    Value::use_iterator U = v->use_begin();
+    
+      // 1. 全局变量，直接 load
+      if (!isa<AllocaInst>(v))
+      {
+        // todo: not sure
+        return true;
+      }
+      // 2. 局部变量，检测是否曾被赋值过。如果前面全是 load 则认为是初始化。
+      // 循环终止的条件：（1）遇到本 instruction【说明是初始化】；（2）遇到结尾。
+
+      // 只能倒序遍历，所以不得不先把后面的 instruction 跳过
+      while (U->getUser() != inst)
+      {
+        ++U;
+      }
+      ++U; // 跳过 v 所在的 inst
+
+      while (U != v->use_end())
+      {
+        errs() << "v 的 user" << U->getUser() << "\n";
+        // 之前已经被使用过了
+        if (isa<StoreInst>(U->getUser()))
+        {
+          // errs() << "之前已经被" << inst << "使用过了" << U->getUser() << " >>> Use：" << *(U->getUser()) << "\n";
+          return true;
+        }
+        ++U;
+        // errs() << "  U->getUser() == inst: " << (U->getUser() == inst) << "\n";
+      }
+  }
+
   void log_char_asterisk_load(std::string filename, std::string varname, int type, LoadInst *inst,
                               BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
   {
@@ -389,7 +425,10 @@ namespace
       {
         for (auto &I : B)
         {
-          errs() << I << '\n';
+          if (auto *op = dyn_cast<GetElementPtrInst>(&I)) {
+            errs() << "gep" << I << '\n';
+          }
+          
           if (!isa<StoreInst>(&I) && !isa<LoadInst>(&I))
           {
             continue;
@@ -415,6 +454,9 @@ namespace
             else if (value_ir_type->isPointerTy())
             {
               // pointer
+              // 1. char*
+              log_char_asterisk_load(filename, varname, type, op, B, logFuncCharAsterisk, Ctx);
+              // 2. char[]
             }
             else if (value_ir_type->isFloatTy())
             {
@@ -431,11 +473,12 @@ namespace
 
           if (auto *op = dyn_cast<StoreInst>(&I))
           {
+            
             // get left: value
             Value *arg1 = op->getOperand(0); // %4 = xxx
             Value *arg2 = op->getOperand(1);
 
-            errs() << *op << '\n';
+            errs() << "store" << *op << '\n';
 
             // 检查该变量是否存在
             if (!ju.hasVariable(mapFileVariable, filename, arg2->getName().str()))
@@ -492,7 +535,18 @@ namespace
             }
             else if (value_ir_type->isPointerTy())
             {
-              // pointer
+              // pointer: char*, char[], string
+
+              // char *
+              // char* s3 = "1234";
+
+              // store 
+              // arg1: i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), 
+              // arg2: i8** %s3, align 8, !dbg !860
+              // errs() << ">>> " << *arg1 << "    " << *arg2 << "\n;";
+              
+              log_fp_store(filename, varname, type, op, B, logFuncCharAsterisk, Ctx);
+              
             }
             else if (value_ir_type->isFloatTy())
             {
