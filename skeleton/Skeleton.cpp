@@ -77,9 +77,11 @@ namespace
     case 3: // string
       return getLogFunc(Ctx, F, Type::getInt8PtrTy(Ctx), "logstring");
     case 4: // float
-      return getLogFunc(Ctx, F, Type::getInt8Ty(Ctx), "logfloat");
+      return getLogFunc(Ctx, F, Type::getFloatTy(Ctx), "logfloat");
     case 5: // double
-      return getLogFunc(Ctx, F, Type::getInt8Ty(Ctx), "logdouble");
+      return getLogFunc(Ctx, F, Type::getDoubleTy(Ctx), "logdouble");
+    case 6:
+      return getLogFunc(Ctx, F, Type::getInt8PtrTy(Ctx), "logstring");
     default: // 0: int
       return getLogFunc(Ctx, F, Type::getInt32Ty(Ctx), "logint");
     }
@@ -196,10 +198,12 @@ namespace
     Value *argfilename = builder.CreateGlobalString(filename);
     Value *argstr = builder.CreateGlobalString(varname);
     Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
-    // Value *argtest = ConstantFP::get(Type::getDoubleTy(Ctx), );
-    // Value *argvalue = dyn_cast_or_null<Value>(inst); // state
-    Value *argvalue = builder.CreateUIToFP(ConstantInt::get(Type::getInt32Ty(Ctx), 4), Type::getFloatTy(Ctx));
+
+    // Value *argvalue = ConstantFP::get(Type::getDoubleTy(Ctx), 2.0);
+    Value *argvalue = dyn_cast_or_null<Value>(inst); // state
+    // Value *argvalue = builder.CreateUIToFP(ConstantInt::get(Type::getInt32Ty(Ctx), 4), Type::getFloatTy(Ctx));
     // Value *argvalue = inst->getOperand(0); // state
+
     Value *argline = getLine(inst, Ctx); //
     // Value *argold = dyn_cast_or_null<Value>(inst);   // old state
     // Value *argold = inst->getOperand(0); // old state
@@ -215,33 +219,10 @@ namespace
     IRBuilder<> builder(inst);
     builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
-    Value *arg1 = inst->getOperand(0);
-    Value *arg2 = inst->getOperand(1);
-
-    // get value of double
-    double number = 998.0;
-
-    if (auto constant_fp = dyn_cast<ConstantFP>(arg1))
-    {
-      APFloat apfloat_number = constant_fp->getValueAPF();
-      // float number = constant_fp->getValueAPF();
-      number = apfloat_number.convertToDouble();
-      // errs() << "* number double is " << number << "\n";
-    }
-    else
-    {
-      // int Value *argvalue = dyn_cast_or_null<Value>(inst); // state
-      // errs() << "弄啥嘞\n";
-    }
-
-    // errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
     Value *argfilename = builder.CreateGlobalString(filename);
     Value *argstr = builder.CreateGlobalString(varname);
     Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
-    // Value *argi = ConstantFP::get(Type::getDoubleTy(Ctx), number); // state
-    // 这儿不能使用 string，因为动态运行的时候，传过去的是这个 value
-    Value *argi = arg1;
-    // errs() << "? arg1=" << *argi << "\n";
+    Value *argi = inst->getOperand(0);
     Value *argline = getLine(inst, Ctx); //
 
     Value *args[] = {argfilename, argline, argstr, argtype, argi, argi}; //
@@ -266,6 +247,59 @@ namespace
     // instrumentation
     builder.CreateCall(logFunc, args);
   }
+
+  void log_float_store(std::string filename, std::string varname, int type, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
+  {
+    IRBuilder<> builder(inst);
+    builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
+
+    Value *argfilename = builder.CreateGlobalString(filename);
+    Value *argstr = builder.CreateGlobalString(varname);
+    Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
+    Value *argi = inst->getOperand(0);
+    Value *argline = getLine(inst, Ctx); //
+
+    Value *args[] = {argfilename, argline, argstr, argtype, argi, argi}; //
+    builder.CreateCall(logFunc, args);
+  }
+
+  /*    FP: float and double   */
+  void log_fp_load(std::string filename, std::string varname, int type, LoadInst *inst,
+                      BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
+  {
+    IRBuilder<> builder(inst);
+    builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
+
+    Value *argfilename = builder.CreateGlobalString(filename);
+    Value *argstr = builder.CreateGlobalString(varname);
+    Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
+    Value *argvalue = dyn_cast_or_null<Value>(inst); // state
+    Value *argline = getLine(inst, Ctx);             //
+    Value *argold = dyn_cast_or_null<Value>(inst);   // old state
+
+    Value *args[] = {argfilename, argline, argstr, argtype, argvalue, argold};
+    // instrumentation
+    builder.CreateCall(logFunc, args);
+  }
+
+  void log_fp_store(std::string filename, std::string varname, int type, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
+  {
+    IRBuilder<> builder(inst);
+    builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
+
+    Value *argfilename = builder.CreateGlobalString(filename);
+    Value *argstr = builder.CreateGlobalString(varname);
+    Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
+    Value *argi = inst->getOperand(0);
+    Value *argline = getLine(inst, Ctx); //
+
+    Value *args[] = {argfilename, argline, argstr, argtype, argi, argi}; //
+    builder.CreateCall(logFunc, args);
+  }
+
+  /* string */
+
+
 
   // 继承自 FunctionPass
   struct SkeletonPass : public FunctionPass
@@ -298,6 +332,7 @@ namespace
       FunctionCallee logFuncString = getLogFunc(Ctx, F, 3);
       FunctionCallee logFuncFloat = getLogFunc(Ctx, F, 4);
       FunctionCallee logFuncDouble = getLogFunc(Ctx, F, 5);
+      FunctionCallee logFuncCharAsterisk = getLogFunc(Ctx, F, 6);
 
       for (auto &B : F)
       {
@@ -333,12 +368,12 @@ namespace
             else if (value_ir_type->isFloatTy())
             {
               // float
-              log_float_load(filename, varname, type, op, B, logFuncDouble, Ctx);
+              log_fp_load(filename, varname, type, op, B, logFuncFloat, Ctx);
             }
             else if (value_ir_type->isDoubleTy())
             {
               // double
-              log_double_load(filename, varname, type, op, B, logFuncDouble, Ctx);
+              log_fp_load(filename, varname, type, op, B, logFuncDouble, Ctx);
             }
             // int
           }
@@ -359,23 +394,6 @@ namespace
 
             std::string varname = ju.getVarname(mapFileVariable, filename, arg2->getName().str());
             int type = ju.mapSvType[varname];
-
-            Value *val = op->getValueOperand();
-            if (auto constant_int = dyn_cast<ConstantInt>(val))
-            {
-              int number = constant_int->getSExtValue();
-              errs() << "store " << number << ".\n";
-            }
-            else if (auto constant_fp = dyn_cast<ConstantFP>(val))
-            {
-              // store float %conv1, float* %f, align 4, !dbg !864
-              // auto constant_fp = dyn_cast<ConstantFP>(arg1);
-              APFloat apfloat_number = constant_fp->getValueAPF();
-              // float number = constant_fp->getValueAPF();
-              double number = apfloat_number.convertToDouble();
-              float number_f = apfloat_number.convertToFloat();
-              // errs() << "【APFloat float】" << number << " " << number_f << ".\n";
-            }
 
             Type *value_ir_type = arg1->getType();
             // store i32 2, i32* %i1, align 4, !dbg !886
@@ -417,6 +435,7 @@ namespace
               else
               {
                 // errs() << "ERROR: integer 无归属。\n";
+                // 可能是 i64
                 log_int_store(filename, varname, type, op, B, logFuncInt, Ctx);
               }
             }
@@ -427,12 +446,12 @@ namespace
             else if (value_ir_type->isFloatTy())
             {
               // float
-              // log_float_store(filename, varname, type, op, B, logFuncInt, Ctx);
+              log_fp_store(filename, varname, type, op, B, logFuncFloat, Ctx);
             }
             else if (value_ir_type->isDoubleTy())
             {
               // double
-              // log_double_store(filename, varname, type, op, B, logFuncInt, Ctx);
+              log_fp_store(filename, varname, type, op, B, logFuncDouble, Ctx);
             }
           }
         }

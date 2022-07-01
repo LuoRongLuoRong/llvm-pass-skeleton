@@ -62,10 +62,16 @@ extern "C" void logstring(char *filename, int line, char *name, int type, char c
   std::cout << "Line " << line << ": " << name << " = " << state << "." << std::endl;
   //    write2file(filename, line, name, state, old_state);
 }
+extern "C" void logcharasterisk(char *filename, int line, char *name, int type, char const *state, char const *old_state)
+{
+  std::cout << "Line " << line << ": " << name << " = " << state << "." << std::endl;
+  //    write2file(filename, line, name, state, old_state);
+}
 
 extern "C" void logdouble(char *filename, int line, char *name, int type, double state, double old_state)
 {
   std::string s = std::to_string(state);
+  // std::cout << "测试 double " << state << std::endl;
   char const *pchar = s.c_str();
   write2file(filename, line, name, type, pchar, pchar);
 }
@@ -73,6 +79,7 @@ extern "C" void logdouble(char *filename, int line, char *name, int type, double
 extern "C" void logfloat(char *filename, int line, char *name, int type, float state, float old_state)
 {
   std::string s = std::to_string(state);
+  // std::cout << "测试 float " << state << std::endl;
   char const *pchar = s.c_str();
   write2file(filename, line, name, type, pchar, pchar);
 }
