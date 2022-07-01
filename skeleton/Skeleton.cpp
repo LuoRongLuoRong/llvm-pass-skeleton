@@ -16,6 +16,18 @@
 
 using namespace llvm;
 
+enum CHECK_STATE
+{
+    LOG_BOOL,
+    LOG_INT,
+    LOG_CHAR,
+    LOG_FLOAT,
+    LOG_DOUBLE,
+    LOG_STRING,
+    LOG_CHAR_ATSRERISK,
+    LOG_CHAR_ARRAY
+};
+
 namespace
 {
 
@@ -70,18 +82,20 @@ namespace
   {
     switch (dataType)
     {
-    case 1: // bool
+    case LOG_BOOL: // bool
       return getLogFunc(Ctx, F, Type::getInt8Ty(Ctx), "logbool");
-    case 2: // char
+    case LOG_CHAR: // char
       return getLogFunc(Ctx, F, Type::getInt8Ty(Ctx), "logchar");
-    case 3: // string
+    case LOG_STRING: // string
       return getLogFunc(Ctx, F, Type::getInt8PtrTy(Ctx), "logstring");
-    case 4: // float
+    case LOG_FLOAT: // float
       return getLogFunc(Ctx, F, Type::getFloatTy(Ctx), "logfloat");
-    case 5: // double
+    case LOG_DOUBLE: // double
       return getLogFunc(Ctx, F, Type::getDoubleTy(Ctx), "logdouble");
-    case 6:
-      return getLogFunc(Ctx, F, Type::getInt8PtrTy(Ctx), "logstring");
+    case LOG_CHAR_ATSRERISK: // char*
+      return getLogFunc(Ctx, F, Type::getInt8PtrTy(Ctx), "logcharasterisk");
+    case LOG_CHAR_ARRAY: // char[]
+      return getLogFunc(Ctx, F, Type::getInt8PtrTy(Ctx), "logchararray");
     default: // 0: int
       return getLogFunc(Ctx, F, Type::getInt32Ty(Ctx), "logint");
     }
@@ -265,7 +279,7 @@ namespace
 
   /*    FP: float and double   */
   void log_fp_load(std::string filename, std::string varname, int type, LoadInst *inst,
-                      BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
+                   BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
   {
     IRBuilder<> builder(inst);
     builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
@@ -297,8 +311,44 @@ namespace
     builder.CreateCall(logFunc, args);
   }
 
-  /* string */
+  /*    char asterisk    */
+  void log_char_asterisk_load(std::string filename, std::string varname, int type, LoadInst *inst,
+                              BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
+  {
+    IRBuilder<> builder(inst);
+    builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
+    Value *argfilename = builder.CreateGlobalString(filename);
+    Value *argstr = builder.CreateGlobalString(varname);
+    Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
+    Value *argvalue = dyn_cast_or_null<Value>(inst); // state
+    Value *argline = getLine(inst, Ctx);             //
+    Value *argold = dyn_cast_or_null<Value>(inst);   // old state
+
+    Value *args[] = {argfilename, argline, argstr, argtype, argvalue, argold};
+    // instrumentation
+    builder.CreateCall(logFunc, args);
+  }
+
+  void log_char_asterisk_store(std::string filename, std::string varname, int type, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
+  {
+    IRBuilder<> builder(inst);
+    builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
+
+    Value *argfilename = builder.CreateGlobalString(filename);
+    Value *argstr = builder.CreateGlobalString(varname);
+    Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
+    Value *argi = inst->getOperand(0);
+    Value *argline = getLine(inst, Ctx); //
+
+    Value *args[] = {argfilename, argline, argstr, argtype, argi, argi}; //
+    builder.CreateCall(logFunc, args);
+  }
+
+
+  /*    string   */
+
+  /*    char array   */
 
 
   // 继承自 FunctionPass
@@ -326,13 +376,14 @@ namespace
       // Get the function to call from our runtime library.
       LLVMContext &Ctx = F.getContext();
 
-      FunctionCallee logFuncInt = getLogFunc(Ctx, F, 0);
-      FunctionCallee logFuncBool = getLogFunc(Ctx, F, 1);
-      FunctionCallee logFuncChar = getLogFunc(Ctx, F, 2);
-      FunctionCallee logFuncString = getLogFunc(Ctx, F, 3);
-      FunctionCallee logFuncFloat = getLogFunc(Ctx, F, 4);
-      FunctionCallee logFuncDouble = getLogFunc(Ctx, F, 5);
-      FunctionCallee logFuncCharAsterisk = getLogFunc(Ctx, F, 6);
+      FunctionCallee logFuncInt = getLogFunc(Ctx, F, LOG_INT);
+      FunctionCallee logFuncBool = getLogFunc(Ctx, F, LOG_BOOL);
+      FunctionCallee logFuncChar = getLogFunc(Ctx, F, LOG_CHAR);
+      FunctionCallee logFuncFloat = getLogFunc(Ctx, F, LOG_FLOAT);
+      FunctionCallee logFuncDouble = getLogFunc(Ctx, F, LOG_DOUBLE);      
+      FunctionCallee logFuncString = getLogFunc(Ctx, F, LOG_STRING);
+      FunctionCallee logFuncCharArray = getLogFunc(Ctx, F, LOG_CHAR_ARRAY);
+      FunctionCallee logFuncCharAsterisk = getLogFunc(Ctx, F, LOG_CHAR_ATSRERISK);
 
       for (auto &B : F)
       {
