@@ -23,7 +23,7 @@ int main() {
     // i2 = i1 + 9; 
     // std::cout << i1 << " is 6"<< std::endl;
 
-    // std::string s1 = "qwe";  
+    std::string s1 = "qwe";  
     // std::cin >> s1;
     // s1 = s1 + "123";
     // std::cout << s1 << std::endl;
@@ -33,11 +33,11 @@ int main() {
     // std::cin >> s2;
     // s2[0] = 'b';
     // std::cout << s2 << std::endl;
+    // char* s4 = s2;
 
-
-    char* s3;
-    std::cin >> s3;
-    std::cout << s3 << std::endl;
+    // char* s3;
+    // std::cin >> s3;
+    // std::cout << s3 << std::endl;
 
     return 0;
 }

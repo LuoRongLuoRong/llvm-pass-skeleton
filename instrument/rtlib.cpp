@@ -68,7 +68,7 @@ extern "C" void logstring(char *filename, int line, char *name, int type, char c
 extern "C" void logchararray(char *filename, int line, char *name, int type, char const *state, char const *old_state)
 {
   std::cout << "Line " << line << ": " << name << " = " << state << "." << std::endl;
-  //    write2file(filename, line, name, state, old_state);
+  write2file(filename, line, name, type, state, old_state);
 }
 
 extern "C" void logcharasterisk(char *filename, int line, char *name, int type, const char *state, char const *old_state)
