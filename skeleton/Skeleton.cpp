@@ -10,7 +10,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/DerivedTypes.h"
 
-#include "../readjson/read_json.cpp"
+#include "../jsonutil/json_util.cpp"
 
 #define MAX_INT (((unsigned int)(-1)) >> 1)
 
@@ -48,14 +48,60 @@ namespace
     return DIF->getFilename();
   }
 
+  // // IR 指令在源代码中的行号
+  // Value *getLine(Instruction *inst, LLVMContext &Ctx)
+  // {
+  //   if (DILocation *DILoc = inst->getDebugLoc())
+  //   {
+  //     return ConstantInt::get(Type::getInt32Ty(Ctx), DILoc->getLine());
+  //   }
+  //   return ConstantInt::get(Type::getInt32Ty(Ctx), 0);
+  // }
+
   // IR 指令在源代码中的行号
-  Value *getLine(Instruction *inst, LLVMContext &Ctx)
+  int getLineNumber(Instruction *inst, LLVMContext &Ctx)
   {
     if (DILocation *DILoc = inst->getDebugLoc())
     {
-      return ConstantInt::get(Type::getInt32Ty(Ctx), DILoc->getLine());
+      return DILoc->getLine();
     }
-    return ConstantInt::get(Type::getInt32Ty(Ctx), 0);
+    return 0;
+  }
+
+  // IR 指令在源代码中的行号的 Value
+  Value *getLine(Instruction *inst, LLVMContext &Ctx)
+  {
+    return ConstantInt::get(Type::getInt32Ty(Ctx), getLineNumber(inst, Ctx));
+  }
+
+  // IR 指令在源代码中的 Column
+  int getColumnNumber(Instruction *inst, LLVMContext &Ctx)
+  {
+    if (DILocation *DILoc = inst->getDebugLoc())
+    {
+      return DILoc->getColumn(); // here wrong
+    }
+    return 0;
+  }
+
+  // IR 指令在源代码中的 Column 的 Value
+  Value *getColumn(Instruction *inst, LLVMContext &Ctx)
+  {
+    return ConstantInt::get(Type::getInt32Ty(Ctx), getColumnNumber(inst, Ctx));
+  }
+
+  // 检查该变量是否是状态变量或者关键变量
+  bool isKeyOrStateVar(Instruction *op, LLVMContext &Ctx, std::string filename, std::string varname, JsonUtil *ju)
+  {
+    int line = getLineNumber(op, Ctx);
+    int column = getColumnNumber(op, Ctx);
+    errs() << filename << " " << varname << " " << line << " " << column << " " << *op << "\n";
+    if (line == 0 || column == 0 || !ju->hasVar(filename, line, column, varname))
+    {
+      return false;
+    }
+    errs() << " >>> \n";
+    return true;
   }
 
   FunctionCallee getLogFunc(LLVMContext &Ctx, Function &F, Type *stateType, std::string rtFuncName)
@@ -427,15 +473,16 @@ namespace
 
     virtual bool runOnFunction(Function &F)
     {
-      jsonutil ju;
+      JsonUtil *ju = JsonUtil::getInstance();
+      ju->save();
       // 判断 filename 是否包含在 json 文件中
       std::string filename = getSourceName(F).str();
       std::string jsonPath = "../SVsite.json";
 
-      std::map<std::string, std::map<std::string, std::vector<int>>> mapFileVariable = ju.readSVsiteJson(jsonPath);
+      // std::map<std::string, std::map<std::string, std::vector<int>>> mapFileVariable = ju.readSVsiteJson(jsonPath);
 
       // 该文件不值得继续探索
-      if (!ju.hasFile(mapFileVariable, filename))
+      if (!ju->inFilepaths(filename))
       {
         return false;
       }
@@ -458,20 +505,17 @@ namespace
         {
           if (auto *op = dyn_cast<GetElementPtrInst>(&I))
           {
-            // errs() << "gep" << I << '\n';
-            // errs() << "   " << op->isInBounds() << '\n';
             Value *arg1 = op->getOperand(0); // %4 = xxx
-            // errs() << "   " << *arg1 << '\n';
-
+            std::string varName = arg1->getName().str();
             // 检查该变量是否存在
-            if (!ju.hasVariable(mapFileVariable, filename, arg1->getName().str()))
+            if (!isKeyOrStateVar(op, Ctx, filename, varName, ju))
             {
               continue;
             }
+            std::string sv = ju->getVarname(filename, varName);
+            int type = ju->getType(filename, sv);
 
-            std::string varname = ju.getVarname(mapFileVariable, filename, arg1->getName().str());
-            int type = ju.mapSvType[varname];
-            log_char_array_gep(filename, varname, type, op, B, logFuncCharArray, Ctx);
+            log_char_array_gep(filename, sv, type, op, B, logFuncCharArray, Ctx);
           }
 
           // 针对数组，数组型变量会被 bitcast 转换成基本数据类型，如 char[] 转换成 i8
@@ -482,18 +526,18 @@ namespace
             Value *arg1 = op->getOperand(0); // %4 = xxx
             errs() << "   " << *arg1 << '\n';
 
+            std::string varName = arg1->getName().str();
             // 检查该变量是否存在
-            if (!ju.hasVariable(mapFileVariable, filename, arg1->getName().str()))
+            if (!isKeyOrStateVar(op, Ctx, filename, varName, ju))
             {
               continue;
             }
+            std::string sv = ju->getVarname(filename, varName);
+            int type = ju->getType(filename, sv);
 
             // %0 = bitcast [4 x i8]* %s2 to i8*, !dbg !860
             // call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %0, i8* align 1 getelementptr inbounds ([4 x i8], [4 x i8]* @__const.main.s2, i32 0, i32 0), i64 4, i1 false), !dbg !860
             Value::use_iterator U = op->use_begin();
-
-            std::string varname = ju.getVarname(mapFileVariable, filename, arg1->getName().str());
-            int type = ju.mapSvType[varname];
 
             while (U != op->use_end())
             {
@@ -501,18 +545,7 @@ namespace
 
               if (auto *callOp = dyn_cast<CallInst>(U->getUser()))
               {
-                // Function* calledFunction = callOp->getCalledFunction();
-                
-                // Value *callOp1 = callOp->getOperand(0);
-                // errs() << "   castInst: " << *callOp1 << '\n';
-                // Value *callOp2 = callOp->getOperand(1);
-                // errs() << "   castInst: " << *callOp2 << '\n';
-                // Value *callOp3 = callOp->getOperand(2);
-                // errs() << "   castInst: " << *callOp3 << '\n';
-                // Value *callOp4 = callOp->getOperand(3);
-                // errs() << "   castInst: " << *callOp4 << '\n';
-
-                log_char_array_call(filename, varname, type, callOp, B, logFuncCharArray, callOp->getContext());
+                log_char_array_call(filename, sv, type, callOp, B, logFuncCharArray, callOp->getContext());
               }
 
               ++U;
@@ -527,37 +560,37 @@ namespace
           if (auto *op = dyn_cast<LoadInst>(&I))
           {
             Value *arg1 = op->getOperand(0);
+            std::string varName = arg1->getName().str();
             // 检查该变量是否存在
-            if (!ju.hasVariable(mapFileVariable, filename, arg1->getName().str()))
+            if (!isKeyOrStateVar(op, Ctx, filename, varName, ju))
             {
               continue;
             }
-
-            std::string varname = ju.getVarname(mapFileVariable, filename, arg1->getName().str());
-            int type = ju.mapSvType[varname];
+            std::string sv = ju->getVarname(filename, varName);
+            int type = ju->getType(filename, sv);
 
             Type *value_ir_type = op->getPointerOperandType()->getContainedType(0);
             if (value_ir_type->isIntegerTy())
             {
-              log_int_load(filename, varname, type, op, B, logFuncInt, Ctx);
+              log_int_load(filename, sv, type, op, B, logFuncInt, Ctx);
             }
             else if (value_ir_type->isPointerTy())
             {
               // pointer
               // 1. char*
-              log_char_asterisk_load(filename, varname, type, op, B, logFuncCharAsterisk, Ctx);
+              log_char_asterisk_load(filename, sv, type, op, B, logFuncCharAsterisk, Ctx);
 
               // 2. string
             }
             else if (value_ir_type->isFloatTy())
             {
               // float
-              log_fp_load(filename, varname, type, op, B, logFuncFloat, Ctx);
+              log_fp_load(filename, sv, type, op, B, logFuncFloat, Ctx);
             }
             else if (value_ir_type->isDoubleTy())
             {
               // double
-              log_fp_load(filename, varname, type, op, B, logFuncDouble, Ctx);
+              log_fp_load(filename, sv, type, op, B, logFuncDouble, Ctx);
             }
             // int
           }
@@ -569,16 +602,16 @@ namespace
             Value *arg1 = op->getOperand(0); // %4 = xxx
             Value *arg2 = op->getOperand(1);
 
-            errs() << "store" << *op << '\n';
+            // errs() << "store" << *op << '\n';
 
+            std::string varName = arg2->getName().str();
             // 检查该变量是否存在
-            if (!ju.hasVariable(mapFileVariable, filename, arg2->getName().str()))
+            if (!isKeyOrStateVar(op, Ctx, filename, varName, ju))
             {
               continue;
             }
-
-            std::string varname = ju.getVarname(mapFileVariable, filename, arg2->getName().str());
-            int type = ju.mapSvType[varname];
+            std::string sv = ju->getVarname(filename, varName);
+            int type = ju->getType(filename, sv);
 
             Type *value_ir_type = arg1->getType();
             // store i32 2, i32* %i1, align 4, !dbg !886
@@ -590,7 +623,7 @@ namespace
               errs() << "IntegerType" << int_bit_width << "\n";
               if (int_bit_width == 1)
               {
-                log_int_store(filename, varname, type, op, B, logFuncBool, Ctx);
+                log_int_store(filename, sv, type, op, B, logFuncBool, Ctx);
               }
               else if (int_bit_width == 8)
               {
@@ -600,28 +633,28 @@ namespace
                   int value = constant_int->getSExtValue();
                   if (value == 0 | value == 1)
                   {
-                    log_int_store(filename, varname, type, op, B, logFuncBool, Ctx);
+                    log_int_store(filename, sv, type, op, B, logFuncBool, Ctx);
                   }
                   else
                   {
-                    log_int_store(filename, varname, type, op, B, logFuncChar, Ctx);
+                    log_int_store(filename, sv, type, op, B, logFuncChar, Ctx);
                   }
                 }
                 else
                 {
                   // errs() << "ERROR: i8 无 int 值。\n";
-                  log_int_store(filename, varname, type, op, B, logFuncChar, Ctx);
+                  log_int_store(filename, sv, type, op, B, logFuncChar, Ctx);
                 }
               }
               else if (int_bit_width == 32)
               {
-                log_int_store(filename, varname, type, op, B, logFuncInt, Ctx);
+                log_int_store(filename, sv, type, op, B, logFuncInt, Ctx);
               }
               else
               {
                 // errs() << "ERROR: integer 无归属。\n";
                 // 可能是 i64
-                log_int_store(filename, varname, type, op, B, logFuncInt, Ctx);
+                log_int_store(filename, sv, type, op, B, logFuncInt, Ctx);
               }
             }
             else if (value_ir_type->isPointerTy())
@@ -636,17 +669,17 @@ namespace
               // arg2: i8** %s3, align 8, !dbg !860
               // errs() << ">>> " << *arg1 << "    " << *arg2 << "\n;";
 
-              log_fp_store(filename, varname, type, op, B, logFuncCharAsterisk, Ctx);
+              log_fp_store(filename, sv, type, op, B, logFuncCharAsterisk, Ctx);
             }
             else if (value_ir_type->isFloatTy())
             {
               // float
-              log_fp_store(filename, varname, type, op, B, logFuncFloat, Ctx);
+              log_fp_store(filename, sv, type, op, B, logFuncFloat, Ctx);
             }
             else if (value_ir_type->isDoubleTy())
             {
               // double
-              log_fp_store(filename, varname, type, op, B, logFuncDouble, Ctx);
+              log_fp_store(filename, sv, type, op, B, logFuncDouble, Ctx);
             }
           }
         }

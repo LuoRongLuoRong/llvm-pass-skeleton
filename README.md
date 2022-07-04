@@ -26,7 +26,7 @@ run.sh : 编译 `TinyWebserver` 项目并运行该项目。该脚本主要包括
 ## 文件夹
 build：项目编译过程中产生的中间文件。
 instrument：运行时库函数，即被插桩的文件。
-readjson：读取 json 文件的代码。
+jsonutil：读取 json 文件的代码。
 skeleton：LLVM Pass 代码，本项目的核心文件。
 TinyWebserver：开源项目。
 

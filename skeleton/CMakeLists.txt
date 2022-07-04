@@ -10,7 +10,7 @@ add_definitions("-fPIC")
 target_compile_features(SkeletonPass PRIVATE cxx_range_for cxx_auto_type)
 
 target_link_libraries(SkeletonPass
-        ReadJson
+        JsonUtil
         )
 
 # LLVM is (typically) built with no C++ RTTI. We need to match that;
