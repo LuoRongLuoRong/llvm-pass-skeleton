@@ -40,6 +40,9 @@ public:
         LOG_CHAR_ARRAY
     };
 
+    /* core function */
+    bool runImpl(Function &F);
+
     // 返回函数所在是[文件的路径+文件的名称]
     StringRef getSourceName(Function &F);
     // IR 指令在源代码中的行号
@@ -94,11 +97,7 @@ public:
                             BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx);
     void log_char_array_call(std::string filename, std::string varname, int type, CallInst *inst,
                              BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx);
-
-    /* core function */
-    bool runImpl(Function &F);
 };
-
 
 StringRef Skeleton::getSourceName(Function &F)
 {
@@ -520,7 +519,6 @@ void Skeleton::log_char_array_call(std::string filename, std::string varname, in
     builder.CreateCall(logFunc, args);
 }
 
-
 /* core function */
 
 // 将 LLVM Pass 的 runOnFunction 解构到这个函数中，
@@ -557,6 +555,31 @@ bool Skeleton::runImpl(Function &F)
     {
         for (auto &I : B)
         {
+            if (auto *op = dyn_cast<CmpInst>(&I)){
+
+            }
+            if (auto *op = dyn_cast<BinaryOperator>(&I))
+            {
+                // Insert at the point where the instruction `op` appears.
+                IRBuilder<> builder(op);
+
+                // Make a multiply with the same operands as `op`.
+                Value *lhs = op->getOperand(0);
+                Value *rhs = op->getOperand(1);
+                Value *mul = builder.CreateMul(lhs, rhs);
+
+                // Everywhere the old instruction was used as an operand, use our
+                // new multiply instruction instead.
+                for (auto &U : op->uses())
+                {
+                    User *user = U.getUser(); // A User is anything with operands.
+                    user->setOperand(U.getOperandNo(), mul);
+                }
+
+                // We modified the code.
+                return true;
+            }
+
             if (auto *op = dyn_cast<GetElementPtrInst>(&I))
             {
                 Value *arg1 = op->getOperand(0); // %4 = xxx
@@ -743,30 +766,29 @@ bool Skeleton::runImpl(Function &F)
     return true;
 }
 
-
 /********************************  pass 的主体  *******************************/
 
 namespace
 {
-  // 继承自 FunctionPass
-  struct SkeletonPass : public FunctionPass
-  {
-    static char ID;
-    SkeletonPass() : FunctionPass(ID) {}
-
-    virtual bool runOnFunction(Function &F)
+    // 继承自 FunctionPass
+    struct SkeletonPass : public FunctionPass
     {
-      // return false;
-      if (F.isIntrinsic())
-      {
-        return false;
-      }
-      return Impl.runImpl(F);
-    }
+        static char ID;
+        SkeletonPass() : FunctionPass(ID) {}
 
-  private:
-    Skeleton Impl;
-  };
+        virtual bool runOnFunction(Function &F)
+        {
+            // return false;
+            if (F.isIntrinsic())
+            {
+                return false;
+            }
+            return Impl.runImpl(F);
+        }
+
+    private:
+        Skeleton Impl;
+    };
 }
 
 /********************************  pass 的注册  *******************************/
@@ -777,6 +799,6 @@ char SkeletonPass::ID = 0;
 // http://adriansampson.net/blog/clangpass.html
 static void registerSkeletonPass(const PassManagerBuilder &, legacy::PassManagerBase &PM)
 {
-  PM.add(new SkeletonPass());
+    PM.add(new SkeletonPass());
 }
 static RegisterStandardPasses RegisterMyPass(PassManagerBuilder::EP_EarlyAsPossible, registerSkeletonPass);

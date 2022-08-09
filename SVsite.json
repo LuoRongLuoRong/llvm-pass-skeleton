@@ -1,297 +1,422 @@
 [
     {
-        "SV": "s3",
-        "column": 26,
-        "filepath": "../src/demo.cpp",
-        "line": 38,
-        "type": 0
-    },
-    {
-        "SV": "s2",
-        "column": 26,
-        "filepath": "../src/demo.cpp",
-        "line": 32,
-        "type": 0
-    },
-    {
-        "SV": "s2",
-        "column": 26,
-        "filepath": "../src/demo.cpp",
-        "line": 33,
-        "type": 0
-    },
-    {
-        "SV": "s2",
-        "column": 26,
-        "filepath": "../src/demo.cpp",
-        "line": 34,
-        "type": 0
-    },
-    {
-        "SV": "s2",
-        "column": 26,
-        "filepath": "../src/demo.cpp",
-        "line": 35,
-        "type": 0
-    },
-    {
-        "SV": "s1",
-        "column": 26,
-        "filepath": "../src/demo.cpp",
-        "line": 26,
-        "type": 0
-    },
-    {
-        "SV": "s1",
-        "column": 26,
-        "filepath": "../src/demo.cpp",
-        "line": 27,
-        "type": 0
-    },
-    {
-        "SV": "s1",
-        "column": 26,
-        "filepath": "../src/demo.cpp",
-        "line": 28,
-        "type": 0
-    },
-    {
-        "SV": "s1",
-        "column": 26,
-        "filepath": "../src/demo.cpp",
-        "line": 29,
-        "type": 0
-    },
-    {
-        "SV": "f1",
-        "column": 11,
-        "filepath": "../src/demo.cpp",
-        "line": 6,
-        "type": 0
-    },
-    {
-        "SV": "f1",
-        "column": 10,
-        "filepath": "../src/demo.cpp",
-        "line": 7,
-        "type": 0
-    },
-    {
-        "SV": "f1",
-        "column": 5,
-        "filepath": "../src/demo.cpp",
-        "line": 7,
-        "type": 0
-    },
-    {
-        "SV": "f1",
-        "column": 17,
-        "filepath": "../src/demo.cpp",
-        "line": 8,
-        "type": 0
-    },
-    {
-        "SV": "f1",
-        "column": 10,
-        "filepath": "../src/demo.cpp",
-        "line": 9,
-        "type": 0
-    },
-    {
-        "SV": "f1",
-        "column": 5,
-        "filepath": "../src/demo.cpp",
-        "line": 9,
-        "type": 0
-    },
-    {
-        "SV": "f1",
-        "column": 18,
-        "filepath": "../src/demo.cpp",
-        "line": 10,
-        "type": 0
-    },
-    {
-        "SV": "d1",
-        "column": 12,
-        "filepath": "../src/demo.cpp",
-        "line": 12,
-        "type": 0
-    },
-    {
-        "SV": "d1",
-        "column": 10,
-        "filepath": "../src/demo.cpp",
-        "line": 13,
-        "type": 0
-    },
-    {
-        "SV": "d1",
-        "column": 5,
-        "filepath": "../src/demo.cpp",
-        "line": 13,
-        "type": 0
-    },
-    {
-        "SV": "d1",
-        "column": 17,
-        "filepath": "../src/demo.cpp",
-        "line": 14,
-        "type": 0
-    },
-    {
-        "SV": "d1",
-        "column": 10,
-        "filepath": "../src/demo.cpp",
-        "line": 15,
-        "type": 0
-    },
-    {
-        "SV": "d1",
-        "column": 5,
-        "filepath": "../src/demo.cpp",
-        "line": 15,
-        "type": 0
-    },
-    {
-        "SV": "d1",
-        "column": 18,
-        "filepath": "../src/demo.cpp",
-        "line": 16,
-        "type": 0
-    },
-    {
-        "SV": "i1",
+        "SV": "state_",
         "column": 9,
-        "filepath": "../src/demo.cpp",
-        "line": 18,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 221,
         "type": 0
     },
     {
-        "SV": "i1",
-        "column": 5,
-        "filepath": "../src/demo.cpp",
-        "line": 19,
+        "SV": "state_",
+        "column": 9,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 216,
         "type": 0
     },
     {
-        "SV": "i1",
+        "SV": "state_",
+        "column": 9,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 218,
+        "type": 0
+    },
+    {
+        "SV": "state_",
+        "column": 9,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 204,
+        "type": 0
+    },
+    {
+        "SV": "state_",
+        "column": 9,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 202,
+        "type": 0
+    },
+    {
+        "SV": "state_",
+        "column": 3,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 135,
+        "type": 0
+    },
+    {
+        "SV": "state_",
+        "column": 9,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 190,
+        "type": 0
+    },
+    {
+        "SV": "state_",
+        "column": 20,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 253,
+        "type": 0
+    },
+    {
+        "SV": "state_",
+        "column": 9,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 237,
+        "type": 0
+    },
+    {
+        "SV": "state_",
+        "column": 9,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 234,
+        "type": 0
+    },
+    {
+        "SV": "state_",
         "column": 7,
-        "filepath": "../src/demo.cpp",
-        "line": 19,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 232,
         "type": 0
     },
     {
-        "SV": "i1",
-        "column": 17,
-        "filepath": "../src/demo.cpp",
-        "line": 20,
+        "SV": "hState_",
+        "column": 11,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 423,
         "type": 0
     },
     {
-        "SV": "i1",
-        "column": 14,
-        "filepath": "../src/demo.cpp",
-        "line": 21,
+        "SV": "hState_",
+        "column": 9,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 429,
         "type": 0
     },
     {
-        "SV": "i1",
-        "column": 10,
-        "filepath": "../src/demo.cpp",
-        "line": 22,
+        "SV": "hState_",
+        "column": 11,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 416,
         "type": 0
     },
     {
-        "SV": "i1",
-        "column": 5,
-        "filepath": "../src/demo.cpp",
-        "line": 22,
+        "SV": "hState_",
+        "column": 9,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 407,
         "type": 0
     },
     {
-        "SV": "i1",
-        "column": 10,
-        "filepath": "../src/demo.cpp",
-        "line": 23,
-        "type": 0
-    },
-    {
-        "SV": "i1",
-        "column": 28,
-        "filepath": "../src/demo.cpp",
-        "line": 24,
-        "type": 0
-    },
-
-    {
-        "SV": "m_check_state",
+        "SV": "hState_",
         "column": 13,
-        "filepath": "http/http_conn.cpp",
-        "line": 348,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 404,
         "type": 0
     },
     {
-        "SV": "m_check_state",
-        "column": 5,
-        "filepath": "http/http_conn.cpp",
-        "line": 141,
+        "SV": "hState_",
+        "column": 11,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 464,
         "type": 0
     },
     {
-        "SV": "m_check_state",
+        "SV": "hState_",
+        "column": 11,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 458,
+        "type": 0
+    },
+    {
+        "SV": "hState_",
+        "column": 11,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 455,
+        "type": 0
+    },
+    {
+        "SV": "hState_",
+        "column": 11,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 444,
+        "type": 0
+    },
+    {
+        "SV": "hState_",
+        "column": 11,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 435,
+        "type": 0
+    },
+    {
+        "SV": "hState_",
+        "column": 3,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 136,
+        "type": 0
+    },
+    {
+        "SV": "hState_",
+        "column": 7,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 477,
+        "type": 0
+    },
+    {
+        "SV": "error_",
+        "column": 9,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 227,
+        "type": 1
+    },
+    {
+        "SV": "error_",
+        "column": 9,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 210,
+        "type": 1
+    },
+    {
+        "SV": "error_",
+        "column": 9,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 198,
+        "type": 1
+    },
+    {
+        "SV": "error_",
+        "column": 7,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 168,
+        "type": 1
+    },
+    {
+        "SV": "error_",
+        "column": 15,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 311,
+        "type": 1
+    },
+    {
+        "SV": "error_",
         "column": 17,
-        "filepath": "http/http_conn.cpp",
-        "line": 353,
-        "type": 0
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 265,
+        "type": 1
     },
     {
-        "SV": "m_check_state",
-        "column": 5,
-        "filepath": "http/http_conn.cpp",
+        "SV": "error_",
+        "column": 10,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 253,
+        "type": 1
+    },
+    {
+        "SV": "error_",
+        "column": 8,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 247,
+        "type": 1
+    },
+    {
+        "SV": "error_",
+        "column": 9,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 241,
+        "type": 1
+    },
+    {
+        "SV": "error_",
+        "column": 8,
+        "filepath": "WebServer\\HttpData.cpp",
         "line": 285,
-        "type": 0
+        "type": 1
     },
     {
-        "SV": "m_check_state",
+        "SV": "error_",
+        "column": 8,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 271,
+        "type": 1
+    },
+    {
+        "SV": "error_",
+        "column": 7,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 276,
+        "type": 1
+    },
+    {
+        "SV": "flag",
+        "column": 19,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 205,
+        "type": 1
+    },
+    {
+        "SV": "flag",
+        "column": 16,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 208,
+        "type": 1
+    },
+    {
+        "SV": "flag",
+        "column": 11,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 206,
+        "type": 1
+    },
+    {
+        "SV": "flag",
+        "column": 16,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 194,
+        "type": 1
+    },
+    {
+        "SV": "flag",
+        "column": 11,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 192,
+        "type": 1
+    },
+    {
+        "SV": "flag",
+        "column": 16,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 191,
+        "type": 1
+    },
+    {
+        "SV": "flag",
+        "column": 3,
+        "filepath": "WebServer\\Util.cpp",
+        "line": 160,
+        "type": 1
+    },
+    {
+        "SV": "flag",
+        "column": 26,
+        "filepath": "WebServer\\Util.cpp",
+        "line": 161,
+        "type": 1
+    },
+    {
+        "SV": "flag",
+        "column": 7,
+        "filepath": "WebServer\\Util.cpp",
+        "line": 157,
+        "type": 1
+    },
+    {
+        "SV": "flag",
+        "column": 9,
+        "filepath": "WebServer\\Util.cpp",
+        "line": 152,
+        "type": 1
+    },
+    {
+        "SV": "flag",
+        "column": 7,
+        "filepath": "WebServer\\Util.cpp",
+        "line": 158,
+        "type": 1
+    },
+    {
+        "SV": "flag",
+        "column": 3,
+        "filepath": "WebServer\\tests\\HTTPClient.cpp",
+        "line": 37,
+        "type": 1
+    },
+    {
+        "SV": "flag",
+        "column": 26,
+        "filepath": "WebServer\\tests\\HTTPClient.cpp",
+        "line": 38,
+        "type": 1
+    },
+    {
+        "SV": "flag",
+        "column": 7,
+        "filepath": "WebServer\\tests\\HTTPClient.cpp",
+        "line": 34,
+        "type": 1
+    },
+    {
+        "SV": "flag",
+        "column": 7,
+        "filepath": "WebServer\\tests\\HTTPClient.cpp",
+        "line": 35,
+        "type": 1
+    },
+    {
+        "SV": "flag",
+        "column": 21,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 235,
+        "type": 1
+    },
+    {
+        "SV": "flag",
+        "column": 11,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 236,
+        "type": 1
+    },
+    {
+        "SV": "connectionState_",
+        "column": 3,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 608,
+        "type": 1
+    },
+    {
+        "SV": "connectionState_",
+        "column": 7,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 182,
+        "type": 1
+    },
+    {
+        "SV": "connectionState_",
+        "column": 9,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 161,
+        "type": 1
+    },
+    {
+        "SV": "connectionState_",
+        "column": 25,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 311,
+        "type": 1
+    },
+    {
+        "SV": "connectionState_",
+        "column": 27,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 265,
+        "type": 1
+    },
+    {
+        "SV": "connectionState_",
         "column": 13,
-        "filepath": "http/http_conn.cpp",
-        "line": 296,
-        "type": 0
-    },
-    {
-        "SV": "line_status",
-        "column": 17,
-        "filepath": "http/http_conn.cpp",
-        "line": 344,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 256,
         "type": 1
     },
     {
-        "SV": "line_status",
-        "column": 53,
-        "filepath": "http/http_conn.cpp",
-        "line": 348,
+        "SV": "connectionState_",
+        "column": 18,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 285,
         "type": 1
     },
     {
-        "SV": "line_status",
-        "column": 82,
-        "filepath": "http/http_conn.cpp",
-        "line": 348,
-        "type": 1
-    },
-    {
-        "SV": "line_status",
-        "column": 13,
-        "filepath": "http/http_conn.cpp",
-        "line": 378,
-        "type": 1
-    },
-    {
-        "SV": "line_status",
-        "column": 13,
-        "filepath": "http/http_conn.cpp",
-        "line": 378,
+        "SV": "connectionState_",
+        "column": 18,
+        "filepath": "WebServer\\HttpData.cpp",
+        "line": 271,
         "type": 1
     }
 ]

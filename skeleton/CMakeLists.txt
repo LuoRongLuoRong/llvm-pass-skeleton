@@ -1,7 +1,7 @@
 
 add_library(SkeletonPass SHARED
-    # List your source files here.
-    Skeleton.cpp
+# List your source files here.
+Skeleton.cpp
 )
 
 add_definitions("-fPIC")
@@ -10,13 +10,13 @@ add_definitions("-fPIC")
 target_compile_features(SkeletonPass PRIVATE cxx_range_for cxx_auto_type)
 
 target_link_libraries(SkeletonPass
-        JsonUtil
-        )
+    JsonUtil
+    )
 
 # LLVM is (typically) built with no C++ RTTI. We need to match that;
 # otherwise, we'll get linker errors about missing RTTI data.
 set_target_properties(SkeletonPass PROPERTIES
-    COMPILE_FLAGS "-fno-rtti"
+COMPILE_FLAGS "-fno-rtti"
 )
 
 # # Make sure the compiler can find include files for our SkeletonPass library
