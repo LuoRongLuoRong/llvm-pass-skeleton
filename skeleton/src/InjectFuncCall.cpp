@@ -92,9 +92,10 @@ FunctionCallee InjectFuncCall::getPrintf(Module &M)
   return Printf;
 }
 
-void InjectFuncCall::insertPrintf(LLVMContext &CTX, Function &F, LoadInst *inst, BasicBlock &B,
+void InjectFuncCall::insertPrintf(LLVMContext &CTX, Function &F, Instruction *inst, BasicBlock &B,
                                   FunctionCallee Printf, Constant *PrintfFormatStrVar,
-                                  std::string filename, std::string varname, int type)
+                                  std::string filename, std::string varname, int type,
+                                  Value *variableValue)
 {
   // Get an IR builder. Sets the insertion point to the top of the function
   IRBuilder<> Builder(inst);
@@ -113,8 +114,7 @@ void InjectFuncCall::insertPrintf(LLVMContext &CTX, Function &F, LoadInst *inst,
       /*value_type=*/ConstantInt::get(Type::getInt32Ty(CTX), type),
       /*variable_name=*/Builder.CreateGlobalStringPtr(varname),
       /*line_of_code=*/getLine(inst, CTX),
-      /*variable_value=*/dyn_cast_or_null<Value>(inst)
-    };
+      /*variable_value=*/variableValue};
 
   // Finally, inject a call to printf
   Builder.CreateCall(
@@ -149,13 +149,38 @@ bool InjectFuncCall::runOnModule(Module &M)
       {
         if (auto *inst = dyn_cast<LoadInst>(&I))
         {
+          // For example, %5 = load i32, i32* %i1, align 4, !dbg !861
+          // arg1 is %i1
           Value *arg1 = inst->getOperand(0);
+          // e.g., %i1 name is i1
           std::string varName = arg1->getName().str();
-          Type *value_ir_type = inst->getPointerOperandType()->getContainedType(0);
-          if (value_ir_type->isIntegerTy())
+          // e.g., %i1 type is i32
+          Type *varIrType = inst->getPointerOperandType()->getContainedType(0);
+
+          if (varIrType->isIntegerTy())
           {
-            insertPrintf(CTX, F, inst, B, Printf, PrintfFormatStrVar, "filename", "varname", 1);
+            insertPrintf(CTX, F, inst, B, Printf, PrintfFormatStrVar,
+                         "filename", varName, 1,
+                         /*run time value of the variable*/ dyn_cast_or_null<Value>(inst));
           }
+        }
+
+        if (auto *inst = dyn_cast<StoreInst>(&I))
+        {
+          Value *arg1 = inst->getOperand(0);
+          Value *arg2 = inst->getOperand(1);
+
+          std::string varName = arg2->getName().str();
+          // e.g., %i1 type is i32
+          Type *varIrType = inst->getPointerOperandType()->getContainedType(0);
+
+          if (varIrType->isIntegerTy())
+          {
+            insertPrintf(CTX, F, inst, B, Printf, PrintfFormatStrVar,
+                         "filename", varName, 1,
+                         /*run time value of the variable*/ arg1);
+          }
+
         }
       }
     }

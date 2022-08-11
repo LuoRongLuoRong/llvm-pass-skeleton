@@ -49,57 +49,57 @@ public:
     // 返回文件所在的[文件的路径+文件的名称]
     StringRef getSourceFilePath(Module &M);
     // IR 指令在源代码中的行号
-    int getLineNumber(Instruction *inst, LLVMContext &CTX);
+    int getLineNumber(Instruction *inst, LLVMContext &Ctx);
     // IR 指令在源代码中的行号的 Value
-    Value *getLine(Instruction *inst, LLVMContext &CTX);
+    Value *getLine(Instruction *inst, LLVMContext &Ctx);
     // IR 指令在源代码中的 Column
-    int getColumnNumber(Instruction *inst, LLVMContext &CTX);
+    int getColumnNumber(Instruction *inst, LLVMContext &Ctx);
     // IR 指令在源代码中的 Column 的 Value
-    Value *getColumn(Instruction *inst, LLVMContext &CTX);
+    Value *getColumn(Instruction *inst, LLVMContext &Ctx);
     // 检查该变量是否是状态变量或者关键变量
-    bool isKeyOrStateVar(Instruction *op, LLVMContext &CTX, std::string filename, std::string varname, JsonUtil *ju);
+    bool isKeyOrStateVar(Instruction *op, LLVMContext &Ctx, std::string filename, std::string varname, JsonUtil *ju);
     // 创建运行时函数：基本创建方法
-    FunctionCallee getLogFunc(LLVMContext &CTX, Function &F, Type *stateType, std::string rtFuncName);
+    FunctionCallee getLogFunc(LLVMContext &Ctx, Function &F, Type *stateType, std::string rtFuncName);
     // 创建运行时函数：根据数据类型创建
-    FunctionCallee getLogFunc(LLVMContext &CTX, Function &F, int dataType);
+    FunctionCallee getLogFunc(LLVMContext &Ctx, Function &F, int dataType);
     // IR 中某个函数的 local variable 表，和源代码中的局部变量是不一样的
     void getLocalVariables(Function &F);
 
     /**    int    **/
     void log_int_load(std::string filename, std::string varname, int type, LoadInst *inst,
-                      BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX);
+                      BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx);
     void log_int_store(std::string filename, std::string varname, int type, StoreInst *inst,
-                       BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX);
+                       BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx);
 
     /**    double    **/
     void log_double_load(std::string filename, std::string varname, int type, LoadInst *inst,
-                         BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX);
+                         BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx);
     void log_double_store(std::string filename, std::string varname, int type, StoreInst *inst,
-                          BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX);
+                          BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx);
 
     /**    float    **/
     void log_float_load(std::string filename, std::string varname, int type, LoadInst *inst,
-                        BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX);
+                        BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx);
     void log_float_store(std::string filename, std::string varname, int type, StoreInst *inst,
-                         BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX);
+                         BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx);
 
     /*    FP: float and double   */
     void log_fp_load(std::string filename, std::string varname, int type, LoadInst *inst,
-                     BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX);
+                     BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx);
     void log_fp_store(std::string filename, std::string varname, int type, StoreInst *inst,
-                      BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX);
+                      BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx);
 
     /*    char asterisk    */
     void log_char_asterisk_load(std::string filename, std::string varname, int type, LoadInst *inst,
-                                BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX);
+                                BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx);
     void log_char_asterisk_store(std::string filename, std::string varname, int type, StoreInst *inst,
-                                 BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX);
+                                 BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx);
 
     /*    char array   */
     void log_char_array_gep(std::string filename, std::string varname, int type, GetElementPtrInst *inst,
-                            BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX);
+                            BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx);
     void log_char_array_call(std::string filename, std::string varname, int type, CallInst *inst,
-                             BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX);
+                             BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx);
 };
 
 PreservedAnalyses Skeleton::run(llvm::Module &M,
@@ -140,7 +140,7 @@ StringRef Skeleton::getSourceFilePath(Module &M)
 }
 
 // IR 指令在源代码中的行号
-int Skeleton::getLineNumber(Instruction *inst, LLVMContext &CTX)
+int Skeleton::getLineNumber(Instruction *inst, LLVMContext &Ctx)
 {
     if (DILocation *DILoc = inst->getDebugLoc())
     {
@@ -150,13 +150,13 @@ int Skeleton::getLineNumber(Instruction *inst, LLVMContext &CTX)
 }
 
 // IR 指令在源代码中的行号的 Value
-Value *Skeleton::getLine(Instruction *inst, LLVMContext &CTX)
+Value *Skeleton::getLine(Instruction *inst, LLVMContext &Ctx)
 {
-    return ConstantInt::get(Type::getInt32Ty(CTX), getLineNumber(inst, CTX));
+    return ConstantInt::get(Type::getInt32Ty(Ctx), getLineNumber(inst, Ctx));
 }
 
 // IR 指令在源代码中的 Column
-int Skeleton::getColumnNumber(Instruction *inst, LLVMContext &CTX)
+int Skeleton::getColumnNumber(Instruction *inst, LLVMContext &Ctx)
 {
     if (DILocation *DILoc = inst->getDebugLoc())
     {
@@ -166,16 +166,16 @@ int Skeleton::getColumnNumber(Instruction *inst, LLVMContext &CTX)
 }
 
 // IR 指令在源代码中的 Column 的 Value
-Value *Skeleton::getColumn(Instruction *inst, LLVMContext &CTX)
+Value *Skeleton::getColumn(Instruction *inst, LLVMContext &Ctx)
 {
-    return ConstantInt::get(Type::getInt32Ty(CTX), getColumnNumber(inst, CTX));
+    return ConstantInt::get(Type::getInt32Ty(Ctx), getColumnNumber(inst, Ctx));
 }
 
 // 检查该变量是否是状态变量或者关键变量
-bool Skeleton::isKeyOrStateVar(Instruction *op, LLVMContext &CTX, std::string filename, std::string varname, JsonUtil *ju)
+bool Skeleton::isKeyOrStateVar(Instruction *op, LLVMContext &Ctx, std::string filename, std::string varname, JsonUtil *ju)
 {
-    int line = getLineNumber(op, CTX);
-    int column = getColumnNumber(op, CTX);
+    int line = getLineNumber(op, Ctx);
+    int column = getColumnNumber(op, Ctx);
     errs() << "检查变量是否存在：" << filename << " " << varname << " " << line << " " << column << " " << *op << " ";
     if (line == 0 || column == 0 || !ju->hasVar(filename, line, column, varname))
     {
@@ -186,7 +186,7 @@ bool Skeleton::isKeyOrStateVar(Instruction *op, LLVMContext &CTX, std::string fi
     return true;
 }
 
-void addLogFunctionCallee(Module &M, LLVMContext &CTX, Function &F, Type *stateType, std::string rtFuncName)
+void addLogFunctionCallee(Module &M, LLVMContext &Ctx, Function &F, Type *stateType, std::string rtFuncName)
 {
 
     auto &CTX = M.getContext();
@@ -239,20 +239,20 @@ void addLogFunctionCallee(Module &M, LLVMContext &CTX, Function &F, Type *stateT
         Printf, {FormatStrPtr, FuncName, Builder.getInt32(F.arg_size())});
 }
 
-FunctionCallee Skeleton::getLogFunc(LLVMContext &CTX, Function &F, Type *stateType, std::string rtFuncName)
+FunctionCallee Skeleton::getLogFunc(LLVMContext &Ctx, Function &F, Type *stateType, std::string rtFuncName)
 {
     // 函数参数：
     std::vector<Type *> paramTypes = {
-        PointerType::getUnqual(Type::getInt8Ty(CTX)), // filename
-        // Type::getInt8PtrTy(CTX),
-        Type::getInt32Ty(CTX),                        // line
-        PointerType::getUnqual(Type::getInt8Ty(CTX)), // name
-        Type::getInt32Ty(CTX),                        // type
+        PointerType::getUnqual(Type::getInt8Ty(Ctx)), // filename
+        // Type::getInt8PtrTy(Ctx),
+        Type::getInt32Ty(Ctx),                        // line
+        PointerType::getUnqual(Type::getInt8Ty(Ctx)), // name
+        Type::getInt32Ty(Ctx),                        // type
         stateType,                                    // state
         stateType                                     // old_state
     };
     // 函数返回值：
-    Type *retType = Type::getVoidTy(CTX);
+    Type *retType = Type::getVoidTy(Ctx);
     // 函数类型：
     FunctionType *logFuncType = FunctionType::get(retType, paramTypes, /*IsVarArgs=*/false);
     // 根据函数的名字获取该函数：
@@ -260,26 +260,26 @@ FunctionCallee Skeleton::getLogFunc(LLVMContext &CTX, Function &F, Type *stateTy
     return logFunc;
 }
 
-FunctionCallee Skeleton::getLogFunc(LLVMContext &CTX, Function &F, int dataType)
+FunctionCallee Skeleton::getLogFunc(LLVMContext &Ctx, Function &F, int dataType)
 {
     switch (dataType)
     {
     case LOG_BOOL: // bool
-        return getLogFunc(CTX, F, Type::getInt8Ty(CTX), "logbool");
+        return getLogFunc(Ctx, F, Type::getInt8Ty(Ctx), "logbool");
     case LOG_CHAR: // char
-        return getLogFunc(CTX, F, Type::getInt8Ty(CTX), "logchar");
+        return getLogFunc(Ctx, F, Type::getInt8Ty(Ctx), "logchar");
     case LOG_STRING: // string
-        return getLogFunc(CTX, F, Type::getInt8PtrTy(CTX), "logstring");
+        return getLogFunc(Ctx, F, Type::getInt8PtrTy(Ctx), "logstring");
     case LOG_FLOAT: // float
-        return getLogFunc(CTX, F, Type::getFloatTy(CTX), "logfloat");
+        return getLogFunc(Ctx, F, Type::getFloatTy(Ctx), "logfloat");
     case LOG_DOUBLE: // double
-        return getLogFunc(CTX, F, Type::getDoubleTy(CTX), "logdouble");
+        return getLogFunc(Ctx, F, Type::getDoubleTy(Ctx), "logdouble");
     case LOG_CHAR_ATSRERISK: // char*
-        return getLogFunc(CTX, F, Type::getInt8PtrTy(CTX), "logcharasterisk");
+        return getLogFunc(Ctx, F, Type::getInt8PtrTy(Ctx), "logcharasterisk");
     case LOG_CHAR_ARRAY: // char[]
-        return getLogFunc(CTX, F, Type::getInt8PtrTy(CTX), "logchararray");
+        return getLogFunc(Ctx, F, Type::getInt8PtrTy(Ctx), "logchararray");
     default: // LOG_INT: int
-        return getLogFunc(CTX, F, Type::getInt32Ty(CTX), "logint");
+        return getLogFunc(Ctx, F, Type::getInt32Ty(Ctx), "logint");
     }
 }
 
@@ -299,7 +299,7 @@ void Skeleton::getLocalVariables(Function &F)
 /****************** instrumented functions *******************/
 /**    int    **/
 void Skeleton::log_int_load(std::string filename, std::string varname, int type, LoadInst *inst,
-                            BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX)
+                            BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
 {
     IRBuilder<> builder(inst);
     builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
@@ -307,18 +307,18 @@ void Skeleton::log_int_load(std::string filename, std::string varname, int type,
     // Value *argfilename = builder.CreateGlobalString(filename);
     Value *argfilename = builder.CreatePointerCast(
         builder.CreateGlobalString(filename),
-        PointerType::getUnqual(Type::getInt8Ty(CTX)), "argfilename");
+        PointerType::getUnqual(Type::getInt8Ty(Ctx)), "argfilename");
     // Value *argstr = builder.CreateGlobalString(varname);
     Value *argstr = builder.CreatePointerCast(
         builder.CreateGlobalString(varname),
-        PointerType::getUnqual(Type::getInt8Ty(CTX)), "argvarname");
-    Value *argtype = ConstantInt::get(Type::getInt32Ty(CTX), type);
+        PointerType::getUnqual(Type::getInt8Ty(Ctx)), "argvarname");
+    Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
     Value *argvalue = dyn_cast_or_null<Value>(inst); // state
-    Value *argline = getLine(inst, CTX);             //
+    Value *argline = getLine(inst, Ctx);             //
     Value *argold = dyn_cast_or_null<Value>(inst);   // old state
 
     Value *args[] = {argfilename, argline, argstr, argtype, argvalue, argvalue};
-    // Value *args[] = {ConstantInt::get(Type::getInt32Ty(CTX), 1)};
+    // Value *args[] = {ConstantInt::get(Type::getInt32Ty(Ctx), 1)};
     // instrumentation
     builder.CreateCall(logFunc, args);
 }
@@ -334,7 +334,7 @@ void insertInt(Module &M)
         /*IsVarArgs=*/true);
 }
 
-void Skeleton::log_int_store(std::string filename, std::string varname, int type, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX)
+void Skeleton::log_int_store(std::string filename, std::string varname, int type, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
 {
     errs() << "看这个看这个！";
     IRBuilder<> builder(inst);
@@ -346,14 +346,14 @@ void Skeleton::log_int_store(std::string filename, std::string varname, int type
     // Value *argfilename = builder.CreateGlobalString(filename);
     Value *argfilename = builder.CreatePointerCast(
         builder.CreateGlobalString(filename),
-        PointerType::getUnqual(Type::getInt8Ty(CTX)), /*name=*/"argfilename");
+        PointerType::getUnqual(Type::getInt8Ty(Ctx)), /*name=*/"argfilename");
     // Value *argstr = builder.CreateGlobalString(varname);
     Value *argstr = builder.CreatePointerCast(
         builder.CreateGlobalString(varname),
-        PointerType::getUnqual(Type::getInt8Ty(CTX)), "argvarname");
-    Value *argtype = ConstantInt::get(Type::getInt32Ty(CTX), type);
+        PointerType::getUnqual(Type::getInt8Ty(Ctx)), "argvarname");
+    Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
     Value *argi = inst->getOperand(0);   // state
-    Value *argline = getLine(inst, CTX); //
+    Value *argline = getLine(inst, Ctx); //
 
     Value *argold;
     // errs() << "   arg2 的 Use 的数目" << arg2->getNumUses() << "\n";
@@ -397,7 +397,7 @@ void Skeleton::log_int_store(std::string filename, std::string varname, int type
     if (isInitial)
     {
         // 未被初始化
-        argold = ConstantInt::get(Type::getInt32Ty(CTX), MAX_INT);
+        argold = ConstantInt::get(Type::getInt32Ty(Ctx), MAX_INT);
     }
     else
     {
@@ -411,40 +411,40 @@ void Skeleton::log_int_store(std::string filename, std::string varname, int type
 
 /**    double    **/
 void Skeleton::log_double_load(std::string filename, std::string varname, int type, LoadInst *inst,
-                               BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX)
+                               BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
 {
     IRBuilder<> builder(inst);
     builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
     Value *argfilename = builder.CreateGlobalString(filename);
     Value *argstr = builder.CreateGlobalString(varname);
-    Value *argtype = ConstantInt::get(Type::getInt32Ty(CTX), type);
+    Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
 
-    // Value *argvalue = ConstantFP::get(Type::getDoubleTy(CTX), 2.0);
+    // Value *argvalue = ConstantFP::get(Type::getDoubleTy(Ctx), 2.0);
     Value *argvalue = dyn_cast_or_null<Value>(inst); // state
-    // Value *argvalue = builder.CreateUIToFP(ConstantInt::get(Type::getInt32Ty(CTX), 4), Type::getFloatTy(CTX));
+    // Value *argvalue = builder.CreateUIToFP(ConstantInt::get(Type::getInt32Ty(Ctx), 4), Type::getFloatTy(Ctx));
     // Value *argvalue = inst->getOperand(0); // state
 
-    Value *argline = getLine(inst, CTX); //
+    Value *argline = getLine(inst, Ctx); //
     // Value *argold = dyn_cast_or_null<Value>(inst);   // old state
     // Value *argold = inst->getOperand(0); // old state
-    Value *argold = builder.CreateUIToFP(ConstantInt::get(Type::getInt32Ty(CTX), 4), Type::getFloatTy(CTX));
+    Value *argold = builder.CreateUIToFP(ConstantInt::get(Type::getInt32Ty(Ctx), 4), Type::getFloatTy(Ctx));
 
     Value *args[] = {argfilename, argline, argstr, argtype, argvalue, argold};
     // instrumentation
     builder.CreateCall(logFunc, args);
 }
 
-void Skeleton::log_double_store(std::string filename, std::string varname, int type, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX)
+void Skeleton::log_double_store(std::string filename, std::string varname, int type, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
 {
     IRBuilder<> builder(inst);
     builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
     Value *argfilename = builder.CreateGlobalString(filename);
     Value *argstr = builder.CreateGlobalString(varname);
-    Value *argtype = ConstantInt::get(Type::getInt32Ty(CTX), type);
+    Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
     Value *argi = inst->getOperand(0);
-    Value *argline = getLine(inst, CTX); //
+    Value *argline = getLine(inst, Ctx); //
 
     Value *args[] = {argfilename, argline, argstr, argtype, argi, argi}; //
     builder.CreateCall(logFunc, args);
@@ -452,16 +452,16 @@ void Skeleton::log_double_store(std::string filename, std::string varname, int t
 
 /**    float    **/
 void Skeleton::log_float_load(std::string filename, std::string varname, int type, LoadInst *inst,
-                              BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX)
+                              BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
 {
     IRBuilder<> builder(inst);
     builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
     Value *argfilename = builder.CreateGlobalString(filename);
     Value *argstr = builder.CreateGlobalString(varname);
-    Value *argtype = ConstantInt::get(Type::getInt32Ty(CTX), type);
+    Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
     Value *argvalue = dyn_cast_or_null<Value>(inst); // state
-    Value *argline = getLine(inst, CTX);             //
+    Value *argline = getLine(inst, Ctx);             //
     Value *argold = dyn_cast_or_null<Value>(inst);   // old state
 
     Value *args[] = {argfilename, argline, argstr, argtype, argvalue, argold};
@@ -469,16 +469,16 @@ void Skeleton::log_float_load(std::string filename, std::string varname, int typ
     builder.CreateCall(logFunc, args);
 }
 
-void Skeleton::log_float_store(std::string filename, std::string varname, int type, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX)
+void Skeleton::log_float_store(std::string filename, std::string varname, int type, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
 {
     IRBuilder<> builder(inst);
     builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
     Value *argfilename = builder.CreateGlobalString(filename);
     Value *argstr = builder.CreateGlobalString(varname);
-    Value *argtype = ConstantInt::get(Type::getInt32Ty(CTX), type);
+    Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
     Value *argi = inst->getOperand(0);
-    Value *argline = getLine(inst, CTX); //
+    Value *argline = getLine(inst, Ctx); //
 
     Value *args[] = {argfilename, argline, argstr, argtype, argi, argi}; //
     builder.CreateCall(logFunc, args);
@@ -486,16 +486,16 @@ void Skeleton::log_float_store(std::string filename, std::string varname, int ty
 
 /*    FP: float and double   */
 void Skeleton::log_fp_load(std::string filename, std::string varname, int type, LoadInst *inst,
-                           BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX)
+                           BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
 {
     IRBuilder<> builder(inst);
     builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
     Value *argfilename = builder.CreateGlobalString(filename);
     Value *argstr = builder.CreateGlobalString(varname);
-    Value *argtype = ConstantInt::get(Type::getInt32Ty(CTX), type);
+    Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
     Value *argvalue = dyn_cast_or_null<Value>(inst); // state
-    Value *argline = getLine(inst, CTX);             //
+    Value *argline = getLine(inst, Ctx);             //
     Value *argold = dyn_cast_or_null<Value>(inst);   // old state
 
     Value *args[] = {argfilename, argline, argstr, argtype, argvalue, argold};
@@ -503,16 +503,16 @@ void Skeleton::log_fp_load(std::string filename, std::string varname, int type, 
     builder.CreateCall(logFunc, args);
 }
 
-void Skeleton::log_fp_store(std::string filename, std::string varname, int type, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX)
+void Skeleton::log_fp_store(std::string filename, std::string varname, int type, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
 {
     IRBuilder<> builder(inst);
     builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
     Value *argfilename = builder.CreateGlobalString(filename);
     Value *argstr = builder.CreateGlobalString(varname);
-    Value *argtype = ConstantInt::get(Type::getInt32Ty(CTX), type);
+    Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
     Value *argi = inst->getOperand(0);
-    Value *argline = getLine(inst, CTX); //
+    Value *argline = getLine(inst, Ctx); //
 
     Value *args[] = {argfilename, argline, argstr, argtype, argi, argi}; //
     builder.CreateCall(logFunc, args);
@@ -521,7 +521,7 @@ void Skeleton::log_fp_store(std::string filename, std::string varname, int type,
 /*    char asterisk    */
 
 // TODO
-bool hasBeenInitialized(Value *v, Value *inst, LLVMContext &CTX)
+bool hasBeenInitialized(Value *v, Value *inst, LLVMContext &Ctx)
 {
 
     Value::use_iterator U = v->use_begin();
@@ -557,16 +557,16 @@ bool hasBeenInitialized(Value *v, Value *inst, LLVMContext &CTX)
 }
 
 void Skeleton::log_char_asterisk_load(std::string filename, std::string varname, int type, LoadInst *inst,
-                                      BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX)
+                                      BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
 {
     IRBuilder<> builder(inst);
     builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
     Value *argfilename = builder.CreateGlobalString(filename);
     Value *argstr = builder.CreateGlobalString(varname);
-    Value *argtype = ConstantInt::get(Type::getInt32Ty(CTX), type);
+    Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
     Value *argvalue = dyn_cast_or_null<Value>(inst); // state
-    Value *argline = getLine(inst, CTX);             //
+    Value *argline = getLine(inst, Ctx);             //
     Value *argold = dyn_cast_or_null<Value>(inst);   // old state
 
     Value *args[] = {argfilename, argline, argstr, argtype, argvalue, argold};
@@ -574,7 +574,7 @@ void Skeleton::log_char_asterisk_load(std::string filename, std::string varname,
     builder.CreateCall(logFunc, args);
 }
 
-void Skeleton::log_char_asterisk_store(std::string filename, std::string varname, int type, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX)
+void Skeleton::log_char_asterisk_store(std::string filename, std::string varname, int type, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
 {
     return;
     IRBuilder<> builder(inst);
@@ -582,9 +582,9 @@ void Skeleton::log_char_asterisk_store(std::string filename, std::string varname
 
     Value *argfilename = builder.CreateGlobalString(filename);
     Value *argstr = builder.CreateGlobalString(varname);
-    Value *argtype = ConstantInt::get(Type::getInt32Ty(CTX), type);
+    Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
     Value *argi = inst->getOperand(0);
-    Value *argline = getLine(inst, CTX); //
+    Value *argline = getLine(inst, Ctx); //
 
     Value *args[] = {argfilename, argline, argstr, argtype, argi, argi}; //
     builder.CreateCall(logFunc, args);
@@ -592,16 +592,16 @@ void Skeleton::log_char_asterisk_store(std::string filename, std::string varname
 
 /*    char array   */
 void Skeleton::log_char_array_gep(std::string filename, std::string varname, int type, GetElementPtrInst *inst,
-                                  BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX)
+                                  BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
 {
     IRBuilder<> builder(inst);
     builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
     Value *argfilename = builder.CreateGlobalString(filename);
     Value *argstr = builder.CreateGlobalString(varname);
-    Value *argtype = ConstantInt::get(Type::getInt32Ty(CTX), type);
+    Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
     Value *argvalue = dyn_cast_or_null<Value>(inst); // state
-    Value *argline = getLine(inst, CTX);             //
+    Value *argline = getLine(inst, Ctx);             //
     Value *argold = dyn_cast_or_null<Value>(inst);   // old state
 
     Value *args[] = {argfilename, argline, argstr, argtype, argvalue, argold};
@@ -609,16 +609,16 @@ void Skeleton::log_char_array_gep(std::string filename, std::string varname, int
     builder.CreateCall(logFunc, args);
 }
 
-void Skeleton::log_char_array_call(std::string filename, std::string varname, int type, CallInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &CTX)
+void Skeleton::log_char_array_call(std::string filename, std::string varname, int type, CallInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
 {
     IRBuilder<> builder(inst);
     builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
     Value *argfilename = builder.CreateGlobalString(filename);
     Value *argstr = builder.CreateGlobalString(varname);
-    Value *argtype = ConstantInt::get(Type::getInt32Ty(CTX), type);
+    Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
     Value *argi = inst->getOperand(0);
-    Value *argline = getLine(inst, CTX); //
+    Value *argline = getLine(inst, Ctx); //
 
     Value *args[] = {argfilename, argline, argstr, argtype, argi, argi}; //
     builder.CreateCall(logFunc, args);
@@ -656,16 +656,16 @@ bool Skeleton::runOnModule(Module &M)
         errs() << F.getName() << argumnents << "\n";
 
         // Get the function to call from our runtime library.
-        LLVMContext &CTX = F.getContext();
+        LLVMContext &Ctx = F.getContext();
 
-        FunctionCallee logFuncInt = getLogFunc(CTX, F, LOG_INT);
-        FunctionCallee logFuncBool = getLogFunc(CTX, F, LOG_BOOL);
-        FunctionCallee logFuncChar = getLogFunc(CTX, F, LOG_CHAR);
-        FunctionCallee logFuncFloat = getLogFunc(CTX, F, LOG_FLOAT);
-        FunctionCallee logFuncDouble = getLogFunc(CTX, F, LOG_DOUBLE);
-        FunctionCallee logFuncString = getLogFunc(CTX, F, LOG_STRING);
-        FunctionCallee logFuncCharArray = getLogFunc(CTX, F, LOG_CHAR_ARRAY);
-        FunctionCallee logFuncCharAsterisk = getLogFunc(CTX, F, LOG_CHAR_ATSRERISK);
+        FunctionCallee logFuncInt = getLogFunc(Ctx, F, LOG_INT);
+        FunctionCallee logFuncBool = getLogFunc(Ctx, F, LOG_BOOL);
+        FunctionCallee logFuncChar = getLogFunc(Ctx, F, LOG_CHAR);
+        FunctionCallee logFuncFloat = getLogFunc(Ctx, F, LOG_FLOAT);
+        FunctionCallee logFuncDouble = getLogFunc(Ctx, F, LOG_DOUBLE);
+        FunctionCallee logFuncString = getLogFunc(Ctx, F, LOG_STRING);
+        FunctionCallee logFuncCharArray = getLogFunc(Ctx, F, LOG_CHAR_ARRAY);
+        FunctionCallee logFuncCharAsterisk = getLogFunc(Ctx, F, LOG_CHAR_ATSRERISK);
 
         for (auto &B : F)
         {
@@ -676,14 +676,14 @@ bool Skeleton::runOnModule(Module &M)
                     Value *arg1 = op->getOperand(0); // %4 = xxx
                     std::string varName = arg1->getName().str();
                     // 检查该变量是否存在
-                    if (!isKeyOrStateVar(op, CTX, filename, varName, ju))
+                    if (!isKeyOrStateVar(op, Ctx, filename, varName, ju))
                     {
                         continue;
                     }
                     std::string sv = ju->getVarname(filename, varName);
                     int type = ju->getType(filename, sv);
 
-                    log_char_array_gep(filename, sv, type, op, B, logFuncCharArray, CTX);
+                    log_char_array_gep(filename, sv, type, op, B, logFuncCharArray, Ctx);
                 }
 
                 // 针对数组，数组型变量会被 bitcast 转换成基本数据类型，如 char[] 转换成 i8
@@ -697,7 +697,7 @@ bool Skeleton::runOnModule(Module &M)
 
                     std::string varName = arg1->getName().str();
                     // 检查该变量是否存在
-                    if (!isKeyOrStateVar(op, CTX, filename, varName, ju))
+                    if (!isKeyOrStateVar(op, Ctx, filename, varName, ju))
                     {
                         continue;
                     }
@@ -731,7 +731,7 @@ bool Skeleton::runOnModule(Module &M)
                     Value *arg1 = op->getOperand(0);
                     std::string varName = arg1->getName().str();
                     // 检查该变量是否存在
-                    if (!isKeyOrStateVar(op, CTX, filename, varName, ju))
+                    if (!isKeyOrStateVar(op, Ctx, filename, varName, ju))
                     {
                         continue;
                     }
@@ -741,25 +741,25 @@ bool Skeleton::runOnModule(Module &M)
                     Type *value_ir_type = op->getPointerOperandType()->getContainedType(0);
                     if (value_ir_type->isIntegerTy())
                     {
-                        log_int_load(filename, sv, type, op, B, logFuncInt, CTX);
+                        log_int_load(filename, sv, type, op, B, logFuncInt, Ctx);
                     }
                     else if (value_ir_type->isPointerTy())
                     {
                         // pointer
                         // 1. char*
-                        log_char_asterisk_load(filename, sv, type, op, B, logFuncCharAsterisk, CTX);
+                        log_char_asterisk_load(filename, sv, type, op, B, logFuncCharAsterisk, Ctx);
 
                         // 2. string
                     }
                     else if (value_ir_type->isFloatTy())
                     {
                         // float
-                        log_fp_load(filename, sv, type, op, B, logFuncFloat, CTX);
+                        log_fp_load(filename, sv, type, op, B, logFuncFloat, Ctx);
                     }
                     else if (value_ir_type->isDoubleTy())
                     {
                         // double
-                        log_fp_load(filename, sv, type, op, B, logFuncDouble, CTX);
+                        log_fp_load(filename, sv, type, op, B, logFuncDouble, Ctx);
                     }
                     // int
                 }
@@ -775,7 +775,7 @@ bool Skeleton::runOnModule(Module &M)
 
                     std::string varName = arg2->getName().str();
                     // 检查该变量是否存在
-                    if (!isKeyOrStateVar(op, CTX, filename, varName, ju))
+                    if (!isKeyOrStateVar(op, Ctx, filename, varName, ju))
                     {
                         continue;
                     }
@@ -786,13 +786,13 @@ bool Skeleton::runOnModule(Module &M)
                     // store i32 2, i32* %i1, align 4, !dbg !886
                     if (value_ir_type->isIntegerTy())
                     {
-                        // log_int_store(filename, varname, type, op, B, logFuncInt, CTX);
+                        // log_int_store(filename, varname, type, op, B, logFuncInt, Ctx);
 
                         unsigned int_bit_width = value_ir_type->getIntegerBitWidth();
                         errs() << "IntegerType" << int_bit_width << "\n";
                         if (int_bit_width == 1)
                         {
-                            log_int_store(filename, sv, type, op, B, logFuncBool, CTX);
+                            log_int_store(filename, sv, type, op, B, logFuncBool, Ctx);
                         }
                         else if (int_bit_width == 8)
                         {
@@ -802,28 +802,28 @@ bool Skeleton::runOnModule(Module &M)
                                 int value = constant_int->getSExtValue();
                                 if (value == 0 | value == 1)
                                 {
-                                    log_int_store(filename, sv, type, op, B, logFuncBool, CTX);
+                                    log_int_store(filename, sv, type, op, B, logFuncBool, Ctx);
                                 }
                                 else
                                 {
-                                    log_int_store(filename, sv, type, op, B, logFuncChar, CTX);
+                                    log_int_store(filename, sv, type, op, B, logFuncChar, Ctx);
                                 }
                             }
                             else
                             {
                                 // errs() << "ERROR: i8 无 int 值。\n";
-                                log_int_store(filename, sv, type, op, B, logFuncChar, CTX);
+                                log_int_store(filename, sv, type, op, B, logFuncChar, Ctx);
                             }
                         }
                         else if (int_bit_width == 32)
                         {
-                            log_int_store(filename, sv, type, op, B, logFuncInt, CTX);
+                            log_int_store(filename, sv, type, op, B, logFuncInt, Ctx);
                         }
                         else
                         {
                             // errs() << "ERROR: integer 无归属。\n";
                             // 可能是 i64
-                            log_int_store(filename, sv, type, op, B, logFuncInt, CTX);
+                            log_int_store(filename, sv, type, op, B, logFuncInt, Ctx);
                         }
                     }
                     else if (value_ir_type->isPointerTy())
@@ -838,17 +838,17 @@ bool Skeleton::runOnModule(Module &M)
                         // arg2: i8** %s3, align 8, !dbg !860
                         // errs() << ">>> " << *arg1 << "    " << *arg2 << "\n;";
 
-                        log_fp_store(filename, sv, type, op, B, logFuncCharAsterisk, CTX);
+                        log_fp_store(filename, sv, type, op, B, logFuncCharAsterisk, Ctx);
                     }
                     else if (value_ir_type->isFloatTy())
                     {
                         // float
-                        log_fp_store(filename, sv, type, op, B, logFuncFloat, CTX);
+                        log_fp_store(filename, sv, type, op, B, logFuncFloat, Ctx);
                     }
                     else if (value_ir_type->isDoubleTy())
                     {
                         // double
-                        log_fp_store(filename, sv, type, op, B, logFuncDouble, CTX);
+                        log_fp_store(filename, sv, type, op, B, logFuncDouble, Ctx);
                     }
                 }
             }

@@ -37,9 +37,10 @@ struct InjectFuncCall : public PassInfoMixin<InjectFuncCall>
   Value *getLine(Instruction *inst, LLVMContext &CTX);
 
   FunctionCallee getPrintf(Module &M);
-  void insertPrintf(LLVMContext &CTX, Function &F, LoadInst *inst, BasicBlock &B,
+  void insertPrintf(LLVMContext &CTX, Function &F, Instruction *inst, BasicBlock &B,
                     FunctionCallee Printf, Constant *PrintfFormatStrVar,
-                    std::string filename, std::string varname, int type);
+                    std::string filename, std::string varname, int type,
+                    Value* variableValue);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
   bool runOnModule(Module &M);
