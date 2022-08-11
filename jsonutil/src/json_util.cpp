@@ -1,4 +1,4 @@
-#include "include/json_util.h"
+#include "json_util.h"
 #include <stdio.h>
 #include <iostream>
 #include <unistd.h>
@@ -85,36 +85,36 @@ std::string JsonUtil::getKey(std::string filepath, int line, int column)
     return key;
 }
 
-// // useless
-// std::string JsonUtil::getKey(std::string filepath, int line, int column, std::string sv) {
-//     std::string sep = "_";
-//     std::string key = filepath + sep + std::to_string(line) + sep + std::to_string(column) + sep + sv;
-//     return key;
-// }
-
+// column 保留变量，实际上并没有用。
 bool JsonUtil::hasVar(std::string filepath, int line, int column, std::string varname)
 {
     if (inSvs(varname))
     {
         std::string key = getKey(filepath, line, column);
+        bool forDebug = varMap.end() != varMap.find(key);
+        std::cout << forDebug << filepath << "::" << line << "::" << column << "::" << varname << std::endl;
         return varMap.end() != varMap.find(key);
     }
     else
     {
         // 补丁 is here
+        // 将 varname 与每个 variable 进行对比
         for (auto variable : variables)
         {
-            int svl = variable.svl;
+            int svl = variable.svl;  // true name
             std::string sv = variable.sv;
             std::string varnameTemp = varname.substr(0, svl);
             if (sv.compare(varnameTemp) == 0)
             {
                 std::string sep = "_";
                 varnameMap[filepath + sep + varname] = sv;
+                std::cout << "true" << filepath << "::" << line << "::" << column << "::" << varname << std::endl;
+        
                 return true;
             }
         }
     }
+    std::cout << "False" << filepath << "::" << line << "::" << column << "::" << varname << std::endl; 
     return false;
 }
 

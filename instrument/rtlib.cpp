@@ -31,8 +31,13 @@ extern "C" void write2file(char *filename, int line, char *name, int type, const
 
 // instrumented function
 
+extern "C" void logint1(int i) {
+  std::cout << "GOOD" << std::endl;
+}
+
 extern "C" void logint(char *filename, int line, char *name, int type, int state, int old_state)
 {
+  std::cout << "Line " << line << ": " << name << " = " << state << "." << std::endl;
   //  loglinevarint(line, name, state, old_state);
   std::string s = std::to_string(state);
   const char *pchar = s.c_str();
