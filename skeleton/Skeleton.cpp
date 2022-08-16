@@ -1,26 +1,25 @@
 #include "llvm/Pass.h"
-#include "llvm/Passes/PassPlugin.h"
-#include "llvm/Passes/PassBuilder.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/ValueSymbolTable.h"
-#include "llvm/IR/Value.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Function.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Value.h"
+#include "llvm/IR/DerivedTypes.h"
 
-// h 会有重复定义的问题
-// #include "json_util.h"
-#include "../jsonutil/src/json_util.cpp"
-#include "../runtimelib/include/rtlib.h"
-#include "../runtimelib/src/rtlib.cpp"
+// 为什么这儿用 h 会报重复定义的错误？
+// #include "../../jsonutil/include/json_util.h"
+// #include "../../jsonutil/json_util.cpp"
+
+// #include "../jsonutil/include/json_util.h"
+#include "../jsonutil/json_util.cpp"
 
 #define MAX_INT (((unsigned int)(-1)) >> 1)
 
@@ -42,10 +41,10 @@ public:
     };
 
     /* core function */
-    llvm::PreservedAnalyses run(llvm::Module &M,
-                                llvm::ModuleAnalysisManager &);
-    bool runOnModule(llvm::Module &M);
+    bool runImpl(Function &F);
 
+    // 返回函数所在是[文件的路径+文件的名称]
+    StringRef getSourceName(Function &F);
     // IR 指令在源代码中的行号
     int getLineNumber(Instruction *inst, LLVMContext &Ctx);
     // IR 指令在源代码中的行号的 Value
@@ -57,9 +56,9 @@ public:
     // 检查该变量是否是状态变量或者关键变量
     bool isKeyOrStateVar(Instruction *op, LLVMContext &Ctx, std::string filename, std::string varname, JsonUtil *ju);
     // 创建运行时函数：基本创建方法
-    FunctionCallee getLogFunc(LLVMContext &Ctx, Module &M, Type *stateType, std::string rtFuncName);
+    FunctionCallee getLogFunc(LLVMContext &Ctx, Function &F, Type *stateType, std::string rtFuncName);
     // 创建运行时函数：根据数据类型创建
-    FunctionCallee getLogFunc(LLVMContext &Ctx, Module &M, int dataType);
+    FunctionCallee getLogFunc(LLVMContext &Ctx, Function &F, int dataType);
     // IR 中某个函数的 local variable 表，和源代码中的局部变量是不一样的
     void getLocalVariables(Function &F);
 
@@ -100,13 +99,20 @@ public:
                              BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx);
 };
 
-PreservedAnalyses Skeleton::run(llvm::Module &M,
-                                llvm::ModuleAnalysisManager &)
+StringRef Skeleton::getSourceName(Function &F)
 {
-    bool Changed = runOnModule(M);
-
-    return (Changed ? llvm::PreservedAnalyses::none()
-                    : llvm::PreservedAnalyses::all());
+    DISubprogram *DI = F.getSubprogram();
+    if (!DI)
+    {
+        // errs() << "Function " << F.getName() << " does not have a subprogram\n";
+        return F.getName();
+    }
+    DIFile *DIF = DI->getFile();
+    if (!DIF)
+    {
+        // errs() << "Function " << F.getName() << " does not have a file\n";
+    }
+    return DIF->getFilename();
 }
 
 // IR 指令在源代码中的行号
@@ -149,108 +155,54 @@ bool Skeleton::isKeyOrStateVar(Instruction *op, LLVMContext &Ctx, std::string fi
     errs() << "检查变量是否存在：" << filename << " " << varname << " " << line << " " << column << " " << *op << " ";
     if (line == 0 || column == 0 || !ju->hasVar(filename, line, column, varname))
     {
+        
         errs() << " 不存在 \n";
         return false;
     }
-    errs() << "\n存在 \n";
+    errs() << " 存在 \n";
     return true;
 }
 
-void addLogFunctionCallee(Module &M, LLVMContext &Ctx, Function &F, Type *stateType, std::string rtFuncName)
-{
-
-    auto &CTX = M.getContext();
-    PointerType *PrintfArgTy = PointerType::getUnqual(Type::getInt8Ty(CTX));
-
-    // STEP 1: Inject the declaration of printf
-    // ----------------------------------------
-    // Create (or _get_ in cases where it's already available) the following
-    // declaration in the IR module:
-    //    declare i32 @printf(i8*, ...)
-    // It corresponds to the following C declaration:
-    //    int printf(char *, ...)
-    FunctionType *PrintfTy = FunctionType::get(
-        IntegerType::getInt32Ty(CTX),
-        PrintfArgTy,
-        /*IsVarArgs=*/true);
-
-    FunctionCallee Printf = M.getOrInsertFunction("printf", PrintfTy);
-
-    // Set attributes as per inferLibFuncAttributes in BuildLibCalls.cpp
-    Function *PrintfF = dyn_cast<Function>(Printf.getCallee());
-    PrintfF->setDoesNotThrow();
-    PrintfF->addParamAttr(0, Attribute::NoCapture);
-    PrintfF->addParamAttr(0, Attribute::ReadOnly);
-
-    // STEP 2: Inject a global variable that will hold the printf format string
-    // ------------------------------------------------------------------------
-    llvm::Constant *PrintfFormatStr = llvm::ConstantDataArray::getString(
-        CTX, "(llvm-tutor) Hello from: %s\n(llvm-tutor)   number of arguments: %d\n");
-
-    Constant *PrintfFormatStrVar =
-        M.getOrInsertGlobal("PrintfFormatStr", PrintfFormatStr->getType());
-    dyn_cast<GlobalVariable>(PrintfFormatStrVar)->setInitializer(PrintfFormatStr);
-
-    // STEP 3: For each function in the module, inject a call to printf
-    // ----------------------------------------------------------------
-    // Get an IR builder. Sets the insertion point to the top of the function
-    IRBuilder<> Builder(&*F.getEntryBlock().getFirstInsertionPt());
-
-    // Inject a global variable that contains the function name
-    auto FuncName = Builder.CreateGlobalStringPtr(F.getName());
-
-    // Printf requires i8*, but PrintfFormatStrVar is an array: [n x i8]. Add
-    // a cast: [n x i8] -> i8*
-    llvm::Value *FormatStrPtr =
-        Builder.CreatePointerCast(PrintfFormatStrVar, PrintfArgTy, "formatStr");
-
-    // Finally, inject a call to printf
-    Builder.CreateCall(
-        Printf, {FormatStrPtr, FuncName, Builder.getInt32(F.arg_size())});
-}
-
-FunctionCallee Skeleton::getLogFunc(LLVMContext &Ctx, Module &M, Type *stateType, std::string rtFuncName)
+FunctionCallee Skeleton::getLogFunc(LLVMContext &Ctx, Function &F, Type *stateType, std::string rtFuncName)
 {
     // 函数参数：
     std::vector<Type *> paramTypes = {
-        // PointerType::getUnqual(Type::getInt8Ty(Ctx)), // filename
-        Type::getInt8PtrTy(Ctx),
-        Type::getInt32Ty(Ctx), // line
-        Type::getInt8PtrTy(Ctx),
-        // PointerType::getUnqual(Type::getInt8Ty(Ctx)), // name
-        Type::getInt32Ty(Ctx), // type
-        stateType,             // state
-        stateType              // old_state
+        Type::getInt8PtrTy(Ctx), // filename
+        Type::getInt32Ty(Ctx),   // line
+        Type::getInt8PtrTy(Ctx), // name
+        Type::getInt32Ty(Ctx),   // type
+        stateType,               // state
+        stateType                // old_state
     };
     // 函数返回值：
     Type *retType = Type::getVoidTy(Ctx);
     // 函数类型：
-    FunctionType *logFuncType = FunctionType::get(retType, paramTypes, /*IsVarArgs=*/false);
+    FunctionType *logFuncType = FunctionType::get(retType, paramTypes, false);
     // 根据函数的名字获取该函数：
-    FunctionCallee logFunc = M.getOrInsertFunction(rtFuncName, logFuncType);
+    FunctionCallee logFunc = F.getParent()->getOrInsertFunction(rtFuncName, logFuncType);
     return logFunc;
 }
 
-FunctionCallee Skeleton::getLogFunc(LLVMContext &Ctx, Module &M, int dataType)
+FunctionCallee Skeleton::getLogFunc(LLVMContext &Ctx, Function &F, int dataType)
 {
     switch (dataType)
     {
     case LOG_BOOL: // bool
-        return getLogFunc(Ctx, M, Type::getInt8Ty(Ctx), "logbool");
+        return getLogFunc(Ctx, F, Type::getInt8Ty(Ctx), "logbool");
     case LOG_CHAR: // char
-        return getLogFunc(Ctx, M, Type::getInt8Ty(Ctx), "logchar");
+        return getLogFunc(Ctx, F, Type::getInt8Ty(Ctx), "logchar");
     case LOG_STRING: // string
-        return getLogFunc(Ctx, M, Type::getInt8PtrTy(Ctx), "logstring");
+        return getLogFunc(Ctx, F, Type::getInt8PtrTy(Ctx), "logstring");
     case LOG_FLOAT: // float
-        return getLogFunc(Ctx, M, Type::getFloatTy(Ctx), "logfloat");
+        return getLogFunc(Ctx, F, Type::getFloatTy(Ctx), "logfloat");
     case LOG_DOUBLE: // double
-        return getLogFunc(Ctx, M, Type::getDoubleTy(Ctx), "logdouble");
+        return getLogFunc(Ctx, F, Type::getDoubleTy(Ctx), "logdouble");
     case LOG_CHAR_ATSRERISK: // char*
-        return getLogFunc(Ctx, M, Type::getInt8PtrTy(Ctx), "logcharasterisk");
+        return getLogFunc(Ctx, F, Type::getInt8PtrTy(Ctx), "logcharasterisk");
     case LOG_CHAR_ARRAY: // char[]
-        return getLogFunc(Ctx, M, Type::getInt8PtrTy(Ctx), "logchararray");
+        return getLogFunc(Ctx, F, Type::getInt8PtrTy(Ctx), "logchararray");
     default: // LOG_INT: int
-        return getLogFunc(Ctx, M, Type::getInt32Ty(Ctx), "logint");
+        return getLogFunc(Ctx, F, Type::getInt32Ty(Ctx), "logint");
     }
 }
 
@@ -275,59 +227,83 @@ void Skeleton::log_int_load(std::string filename, std::string varname, int type,
     IRBuilder<> builder(inst);
     builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
-    // Value *argfilename = builder.CreateGlobalString(filename);
-    // Value *argstr = builder.CreateGlobalString(varname);
-    Value *argfilename = builder.CreatePointerCast(
-        builder.CreateGlobalString(filename),
-        PointerType::getUnqual(Type::getInt8Ty(Ctx)));
-    Value *argstr = builder.CreatePointerCast(
-        builder.CreateGlobalString(varname),
-        PointerType::getUnqual(Type::getInt8Ty(Ctx)));
+    Value *argfilename = builder.CreateGlobalString(filename);
+    Value *argstr = builder.CreateGlobalString(varname);
     Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
     Value *argvalue = dyn_cast_or_null<Value>(inst); // state
     Value *argline = getLine(inst, Ctx);             //
+    Value *argold = dyn_cast_or_null<Value>(inst);   // old state
 
-    Value *args[] = {argfilename, argline, argstr, argtype, argvalue, argvalue};
-    // Value *args[] = {ConstantInt::get(Type::getInt32Ty(Ctx), 1)};
+    Value *args[] = {argfilename, argline, argstr, argtype, argvalue, argold};
     // instrumentation
     builder.CreateCall(logFunc, args);
 }
 
-// TODO: for injectFuncCall
-void insertInt(Module &M)
-{
-    auto &CTX = M.getContext();
-    PointerType *PrintfArgTy = PointerType::getUnqual(Type::getInt8Ty(CTX));
-    FunctionType *PrintfTy = FunctionType::get(
-        IntegerType::getInt32Ty(CTX),
-        PrintfArgTy,
-        /*IsVarArgs=*/true);
-}
-
 void Skeleton::log_int_store(std::string filename, std::string varname, int type, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
 {
-    return;
-    errs() << "看这个看这个！";
     IRBuilder<> builder(inst);
     builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
     // get right: name
     Value *arg2 = inst->getOperand(1);
     // errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
-    // Value *argfilename = builder.CreateGlobalString(filename);
-    // Value *argstr = builder.CreateGlobalString(varname);
-    Value *argfilename = builder.CreatePointerCast(
-        builder.CreateGlobalString(filename),
-        PointerType::getUnqual(Type::getInt8Ty(Ctx)));
-
-    Value *argstr = builder.CreatePointerCast(
-        builder.CreateGlobalString(varname),
-        PointerType::getUnqual(Type::getInt8Ty(Ctx)));
+    Value *argfilename = builder.CreateGlobalString(filename);
+    Value *argstr = builder.CreateGlobalString(varname);
     Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
     Value *argi = inst->getOperand(0);   // state
     Value *argline = getLine(inst, Ctx); //
 
-    Value *args[] = {argfilename, argline, argfilename, argtype, argi, argi}; //
+    Value *argold;
+    // errs() << "   arg2 的 Use 的数目" << arg2->getNumUses() << "\n";
+
+    Value::use_iterator U = arg2->use_begin();
+
+    bool isInitial = true;
+    do
+    {
+        // 1. 全局变量，直接 load
+        if (!isa<AllocaInst>(arg2))
+        {
+            isInitial = false;
+            break;
+        }
+        // 2. 局部变量，检测是否曾被赋值过。如果前面全是 load 则认为是初始化。
+        // 循环终止的条件：（1）遇到本 instruction【说明是初始化】；（2）遇到结尾。
+
+        // 只能倒序遍历，所以不得不出此下策
+        while (U->getUser() != inst)
+        {
+            ++U;
+        }
+        ++U; // 跳过 inst
+
+        while (U != arg2->use_end())
+        {
+            // 之前已经被使用过了
+            if (isa<StoreInst>(U->getUser()))
+            {
+                isInitial = false;
+                // errs() << "之前已经被" << inst << "使用过了" << U->getUser() << " >>> Use：" << *(U->getUser()) << "\n";
+
+                break;
+            }
+            ++U;
+            // errs() << "  U->getUser() == inst: " << (U->getUser() == inst) << "\n";
+        }
+    } while (false);
+
+    if (isInitial)
+    {
+        // 未被初始化
+        argold = ConstantInt::get(Type::getInt32Ty(Ctx), MAX_INT);
+    }
+    else
+    {
+        LoadInst *loadInst = new LoadInst(arg2->getType(), arg2, arg2->getName(), inst);
+        argold = dyn_cast_or_null<Value>(loadInst);
+    }
+
+    Value *args[] = {argfilename, argline, argstr, argtype, argi, argold}; //
     builder.CreateCall(logFunc, args);
 }
 
@@ -498,7 +474,6 @@ void Skeleton::log_char_asterisk_load(std::string filename, std::string varname,
 
 void Skeleton::log_char_asterisk_store(std::string filename, std::string varname, int type, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
 {
-    return;
     IRBuilder<> builder(inst);
     builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
@@ -550,272 +525,262 @@ void Skeleton::log_char_array_call(std::string filename, std::string varname, in
 
 // 将 LLVM Pass 的 runOnFunction 解构到这个函数中，
 // 目的是减少成员变量的无效赋值，以提高项目效率。
-bool Skeleton::runOnModule(Module &M)
+bool Skeleton::runImpl(Function &F)
 {
-    // logint("Hello", 1, "hello", 1, 1);
-    // defining the global variable
-    // M.getOrInsertGlobal("logint", Type::getVoidTy(M.getContext()));
-    // llvm::GlobalVariable *gVar = M.getNamedGlobal("logint");
-
-    // // initialize the variable with an undef value to ensure it is added to the symbol table
-    // gVar->setInitializer(llvm::UndefValue::get(Type::getVoidTy(M.getContext())));
-
-
     JsonUtil *ju = JsonUtil::getInstance();
-    // 读取并存储 json 内容
     ju->save();
     // 判断 filename 是否包含在 json 文件中
+    std::string filename = getSourceName(F).str();
     std::string jsonPath = "../SVsite.json";
-    // 返回文件所在的[文件在项目中的相对路径+文件的名称]
-    std::string filename = M.getSourceFileName();
+
+    // std::map<std::string, std::map<std::string, std::vector<int>>> mapFileVariable = ju.readSVsiteJson(jsonPath);
 
     // 该文件不值得继续探索
     if (!ju->inFilepaths(filename))
     {
-        errs() << "该文件不值得继续探索: " << filename << "\n";
+        // errs() << "该文件不值得继续探索: " << filename << "\n";
         return false;
     }
     errs() << "该文件值得继续探索: " << filename << "\n";
 
     // Get the function to call from our runtime library.
-    LLVMContext &Ctx = M.getContext();
+    LLVMContext &Ctx = F.getContext();
 
-    FunctionCallee logFuncInt = getLogFunc(Ctx, M, LOG_INT);
-    FunctionCallee logFuncBool = getLogFunc(Ctx, M, LOG_BOOL);
-    FunctionCallee logFuncChar = getLogFunc(Ctx, M, LOG_CHAR);
-    FunctionCallee logFuncFloat = getLogFunc(Ctx, M, LOG_FLOAT);
-    FunctionCallee logFuncDouble = getLogFunc(Ctx, M, LOG_DOUBLE);
-    FunctionCallee logFuncString = getLogFunc(Ctx, M, LOG_STRING);
-    FunctionCallee logFuncCharArray = getLogFunc(Ctx, M, LOG_CHAR_ARRAY);
-    FunctionCallee logFuncCharAsterisk = getLogFunc(Ctx, M, LOG_CHAR_ATSRERISK);
+    FunctionCallee logFuncInt = getLogFunc(Ctx, F, LOG_INT);
+    FunctionCallee logFuncBool = getLogFunc(Ctx, F, LOG_BOOL);
+    FunctionCallee logFuncChar = getLogFunc(Ctx, F, LOG_CHAR);
+    FunctionCallee logFuncFloat = getLogFunc(Ctx, F, LOG_FLOAT);
+    FunctionCallee logFuncDouble = getLogFunc(Ctx, F, LOG_DOUBLE);
+    FunctionCallee logFuncString = getLogFunc(Ctx, F, LOG_STRING);
+    FunctionCallee logFuncCharArray = getLogFunc(Ctx, F, LOG_CHAR_ARRAY);
+    FunctionCallee logFuncCharAsterisk = getLogFunc(Ctx, F, LOG_CHAR_ATSRERISK);
 
-    for (auto &F : M)
+    for (auto &B : F)
     {
-        if (F.isDeclaration() || F.isIntrinsic())
+        for (auto &I : B)
         {
-            continue;
-        }
+            // if (auto *op = dyn_cast<CmpInst>(&I)){
+            // }
 
-        auto argumnents = F.arg_size();
-        errs() << F.getName() << argumnents << "\n";
-
-        for (auto &B : F)
-        {
-            for (auto &I : B)
+            if (auto *op = dyn_cast<GetElementPtrInst>(&I))
             {
-                if (auto *op = dyn_cast<GetElementPtrInst>(&I))
-                {
-                    Value *arg1 = op->getOperand(0); // %4 = xxx
-                    std::string varName = arg1->getName().str();
-                    // 检查该变量是否存在
-                    if (!isKeyOrStateVar(op, Ctx, filename, varName, ju))
-                    {
-                        continue;
-                    }
-                    std::string sv = ju->getVarname(filename, varName);
-                    int type = ju->getType(filename, sv);
-
-                    log_char_array_gep(filename, sv, type, op, B, logFuncCharArray, Ctx);
-                }
-
-                // 针对数组，数组型变量会被 bitcast 转换成基本数据类型，如 char[] 转换成 i8
-                // LLVM 会给这个变量一个临时名称。在这个函数
-                if (auto *op = dyn_cast<BitCastInst>(&I))
+                Value *arg1 = op->getOperand(0); // %4 = xxx
+                std::string varName = arg1->getName().str();
+                // 检查该变量是否存在
+                if (!isKeyOrStateVar(op, Ctx, filename, varName, ju))
                 {
                     continue;
-                    errs() << "bitcast" << I << '\n';
-                    Value *arg1 = op->getOperand(0); // %4 = xxx
-                    errs() << "   " << *arg1 << '\n';
-
-                    std::string varName = arg1->getName().str();
-                    // 检查该变量是否存在
-                    if (!isKeyOrStateVar(op, Ctx, filename, varName, ju))
-                    {
-                        continue;
-                    }
-                    std::string sv = ju->getVarname(filename, varName);
-                    int type = ju->getType(filename, sv);
-
-                    // %0 = bitcast [4 x i8]* %s2 to i8*, !dbg !860
-                    // call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %0, i8* align 1 getelementptr inbounds ([4 x i8], [4 x i8]* @__const.main.s2, i32 0, i32 0), i64 4, i1 false), !dbg !860
-                    Value::use_iterator U = op->use_begin();
-
-                    while (U != op->use_end())
-                    {
-                        errs() << "  op->use: " << *(U->getUser()) << "\n";
-
-                        if (auto *callOp = dyn_cast<CallInst>(U->getUser()))
-                        {
-                            log_char_array_call(filename, sv, type, callOp, B, logFuncCharArray, callOp->getContext());
-                        }
-
-                        ++U;
-                    }
                 }
+                std::string sv = ju->getVarname(filename, varName);
+                int type = ju->getType(filename, sv);
 
-                // if (!isa<StoreInst>(&I) && !isa<LoadInst>(&I))
-                // {
-                //   continue;
-                // }
+                log_char_array_gep(filename, sv, type, op, B, logFuncCharArray, Ctx);
+            }
 
-                if (auto *op = dyn_cast<LoadInst>(&I))
+            // 针对数组，数组型变量会被 bitcast 转换成基本数据类型，如 char[] 转换成 i8
+            // LLVM 会给这个变量一个临时名称。在这个函数
+            if (auto *op = dyn_cast<BitCastInst>(&I))
+            {
+                errs() << "bitcast" << I << '\n';
+                Value *arg1 = op->getOperand(0); // %4 = xxx
+                errs() << "   " << *arg1 << '\n';
+
+                std::string varName = arg1->getName().str();
+                // 检查该变量是否存在
+                if (!isKeyOrStateVar(op, Ctx, filename, varName, ju))
                 {
-                    Value *arg1 = op->getOperand(0);
-                    std::string varName = arg1->getName().str();
-                    // 检查该变量是否存在
-                    if (!isKeyOrStateVar(op, Ctx, filename, varName, ju))
-                    {
-                        continue;
-                    }
-                    std::string sv = ju->getVarname(filename, varName);
-                    int type = ju->getType(filename, sv);
-
-                    Type *value_ir_type = op->getPointerOperandType()->getContainedType(0);
-                    if (value_ir_type->isIntegerTy())
-                    {
-                        log_int_load(filename, sv, type, op, B, logFuncInt, Ctx);
-                    }
-                    else if (value_ir_type->isPointerTy())
-                    {
-                        // pointer
-                        // 1. char*
-                        log_char_asterisk_load(filename, sv, type, op, B, logFuncCharAsterisk, Ctx);
-
-                        // 2. string
-                    }
-                    else if (value_ir_type->isFloatTy())
-                    {
-                        // float
-                        log_fp_load(filename, sv, type, op, B, logFuncFloat, Ctx);
-                    }
-                    else if (value_ir_type->isDoubleTy())
-                    {
-                        // double
-                        log_fp_load(filename, sv, type, op, B, logFuncDouble, Ctx);
-                    }
-                    // int
+                    continue;
                 }
+                std::string sv = ju->getVarname(filename, varName);
+                int type = ju->getType(filename, sv);
 
-                if (auto *op = dyn_cast<StoreInst>(&I))
+                // %0 = bitcast [4 x i8]* %s2 to i8*, !dbg !860
+                // call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %0, i8* align 1 getelementptr inbounds ([4 x i8], [4 x i8]* @__const.main.s2, i32 0, i32 0), i64 4, i1 false), !dbg !860
+                Value::use_iterator U = op->use_begin();
+
+                while (U != op->use_end())
                 {
+                    errs() << "  op->use: " << *(U->getUser()) << "\n";
 
-                    // get left: value
-                    Value *arg1 = op->getOperand(0); // %4 = xxx
-                    Value *arg2 = op->getOperand(1);
-
-                    // errs() << "store" << *op << '\n';
-
-                    std::string varName = arg2->getName().str();
-                    // 检查该变量是否存在
-                    if (!isKeyOrStateVar(op, Ctx, filename, varName, ju))
+                    if (auto *callOp = dyn_cast<CallInst>(U->getUser()))
                     {
-                        continue;
+                        log_char_array_call(filename, sv, type, callOp, B, logFuncCharArray, callOp->getContext());
                     }
-                    std::string sv = ju->getVarname(filename, varName);
-                    int type = ju->getType(filename, sv);
 
-                    Type *value_ir_type = arg1->getType();
-                    // store i32 2, i32* %i1, align 4, !dbg !886
-                    if (value_ir_type->isIntegerTy())
+                    ++U;
+                }
+            }
+
+            // if (!isa<StoreInst>(&I) && !isa<LoadInst>(&I))
+            // {
+            //   continue;
+            // }
+
+            if (auto *op = dyn_cast<LoadInst>(&I))
+            {
+                Value *arg1 = op->getOperand(0);
+                std::string varName = arg1->getName().str();
+                // 检查该变量是否存在
+                if (!isKeyOrStateVar(op, Ctx, filename, varName, ju))
+                {
+                    continue;
+                }
+                std::string sv = ju->getVarname(filename, varName);
+                int type = ju->getType(filename, sv);
+
+                Type *value_ir_type = op->getPointerOperandType()->getContainedType(0);
+                if (value_ir_type->isIntegerTy())
+                {
+                    log_int_load(filename, sv, type, op, B, logFuncInt, Ctx);
+                }
+                else if (value_ir_type->isPointerTy())
+                {
+                    // pointer
+                    // 1. char*
+                    log_char_asterisk_load(filename, sv, type, op, B, logFuncCharAsterisk, Ctx);
+
+                    // 2. string
+                }
+                else if (value_ir_type->isFloatTy())
+                {
+                    // float
+                    log_fp_load(filename, sv, type, op, B, logFuncFloat, Ctx);
+                }
+                else if (value_ir_type->isDoubleTy())
+                {
+                    // double
+                    log_fp_load(filename, sv, type, op, B, logFuncDouble, Ctx);
+                }
+                // int
+            }
+
+            if (auto *op = dyn_cast<StoreInst>(&I))
+            {
+
+                // get left: value
+                Value *arg1 = op->getOperand(0); // %4 = xxx
+                Value *arg2 = op->getOperand(1);
+
+                // errs() << "store" << *op << '\n';
+
+                std::string varName = arg2->getName().str();
+                // 检查该变量是否存在
+                if (!isKeyOrStateVar(op, Ctx, filename, varName, ju))
+                {
+                    continue;
+                }
+                std::string sv = ju->getVarname(filename, varName);
+                int type = ju->getType(filename, sv);
+
+                Type *value_ir_type = arg1->getType();
+                // store i32 2, i32* %i1, align 4, !dbg !886
+                if (value_ir_type->isIntegerTy())
+                {
+                    // log_int_store(filename, varname, type, op, B, logFuncInt, Ctx);
+
+                    unsigned int_bit_width = value_ir_type->getIntegerBitWidth();
+                    errs() << "IntegerType" << int_bit_width << "\n";
+                    if (int_bit_width == 1)
                     {
-                        // log_int_store(filename, varname, type, op, B, logFuncInt, Ctx);
-
-                        unsigned int_bit_width = value_ir_type->getIntegerBitWidth();
-                        errs() << "IntegerType" << int_bit_width << "\n";
-                        if (int_bit_width == 1)
+                        log_int_store(filename, sv, type, op, B, logFuncBool, Ctx);
+                    }
+                    else if (int_bit_width == 8)
+                    {
+                        // 1. bool
+                        if (auto constant_int = dyn_cast<ConstantInt>(arg1))
                         {
-                            log_int_store(filename, sv, type, op, B, logFuncBool, Ctx);
-                        }
-                        else if (int_bit_width == 8)
-                        {
-                            // 1. bool
-                            if (auto constant_int = dyn_cast<ConstantInt>(arg1))
+                            int value = constant_int->getSExtValue();
+                            if (value == 0 | value == 1)
                             {
-                                int value = constant_int->getSExtValue();
-                                if (value == 0 | value == 1)
-                                {
-                                    log_int_store(filename, sv, type, op, B, logFuncBool, Ctx);
-                                }
-                                else
-                                {
-                                    log_int_store(filename, sv, type, op, B, logFuncChar, Ctx);
-                                }
+                                log_int_store(filename, sv, type, op, B, logFuncBool, Ctx);
                             }
                             else
                             {
-                                // errs() << "ERROR: i8 无 int 值。\n";
                                 log_int_store(filename, sv, type, op, B, logFuncChar, Ctx);
                             }
                         }
-                        else if (int_bit_width == 32)
-                        {
-                            log_int_store(filename, sv, type, op, B, logFuncInt, Ctx);
-                        }
                         else
                         {
-                            // errs() << "ERROR: integer 无归属。\n";
-                            // 可能是 i64
-                            log_int_store(filename, sv, type, op, B, logFuncInt, Ctx);
+                            // errs() << "ERROR: i8 无 int 值。\n";
+                            log_int_store(filename, sv, type, op, B, logFuncChar, Ctx);
                         }
                     }
-                    else if (value_ir_type->isPointerTy())
+                    else if (int_bit_width == 32)
                     {
-                        // pointer: char*, char[], string
-
-                        // char *
-                        // char* s3 = "1234";
-
-                        // store
-                        // arg1: i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0),
-                        // arg2: i8** %s3, align 8, !dbg !860
-                        // errs() << ">>> " << *arg1 << "    " << *arg2 << "\n;";
-
-                        log_fp_store(filename, sv, type, op, B, logFuncCharAsterisk, Ctx);
+                        log_int_store(filename, sv, type, op, B, logFuncInt, Ctx);
                     }
-                    else if (value_ir_type->isFloatTy())
+                    else
                     {
-                        // float
-                        log_fp_store(filename, sv, type, op, B, logFuncFloat, Ctx);
+                        // errs() << "ERROR: integer 无归属。\n";
+                        // 可能是 i64
+                        log_int_store(filename, sv, type, op, B, logFuncInt, Ctx);
                     }
-                    else if (value_ir_type->isDoubleTy())
-                    {
-                        // double
-                        log_fp_store(filename, sv, type, op, B, logFuncDouble, Ctx);
-                    }
+                }
+                else if (value_ir_type->isPointerTy())
+                {
+                    // pointer: char*, char[], string
+
+                    // char *
+                    // char* s3 = "1234";
+
+                    // store
+                    // arg1: i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0),
+                    // arg2: i8** %s3, align 8, !dbg !860
+                    // errs() << ">>> " << *arg1 << "    " << *arg2 << "\n;";
+
+                    log_fp_store(filename, sv, type, op, B, logFuncCharAsterisk, Ctx);
+                }
+                else if (value_ir_type->isFloatTy())
+                {
+                    // float
+                    log_fp_store(filename, sv, type, op, B, logFuncFloat, Ctx);
+                }
+                else if (value_ir_type->isDoubleTy())
+                {
+                    // double
+                    log_fp_store(filename, sv, type, op, B, logFuncDouble, Ctx);
                 }
             }
         }
-        errs() << "FINISH " << F.getName() << argumnents << "\n";
     }
 
     // 对源码进行了修改返回 true
     return true;
 }
 
-//-----------------------------------------------------------------------------
-// New PM Registration
-//-----------------------------------------------------------------------------
-llvm::PassPluginLibraryInfo getInjectFuncCallPluginInfo()
+/********************************  pass 的主体  *******************************/
+
+namespace
 {
-    return {LLVM_PLUGIN_API_VERSION, "skeleton", LLVM_VERSION_STRING,
-            [](PassBuilder &PB)
+    // 继承自 FunctionPass
+    struct SkeletonPass : public FunctionPass
+    {
+        static char ID;
+        SkeletonPass() : FunctionPass(ID) {}
+
+        virtual bool runOnFunction(Function &F)
+        {
+            // return false;
+            if (F.isIntrinsic())
             {
-                PB.registerPipelineParsingCallback(
-                    [](StringRef Name, ModulePassManager &MPM,
-                       ArrayRef<PassBuilder::PipelineElement>)
-                    {
-                        if (Name == "skeleton")
-                        {
-                            MPM.addPass(Skeleton());
-                            return true;
-                        }
-                        return false;
-                    });
-            }};
+                return false;
+            }
+            return Impl.runImpl(F);
+        }
+
+    private:
+        Skeleton Impl;
+    };
 }
 
-extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
-llvmGetPassPluginInfo()
+/********************************  pass 的注册  *******************************/
+// 注册 pass 并且自启动
+char SkeletonPass::ID = 0;
+
+// Automatically enable the pass.
+// http://adriansampson.net/blog/clangpass.html
+static void registerSkeletonPass(const PassManagerBuilder &, legacy::PassManagerBase &PM)
 {
-    return getInjectFuncCallPluginInfo();
+    PM.add(new SkeletonPass());
 }
+static RegisterStandardPasses RegisterMyPass(PassManagerBuilder::EP_EarlyAsPossible, registerSkeletonPass);

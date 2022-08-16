@@ -1,25 +1,26 @@
-export LLVM_DIR=/home/fdse/node_modules/llvm-13.0.0.obj/
-
-echo "(INFO) Start compiling the whole project..."
 cd ./build
 rm -rf *
 cmake ..
 make
-echo "(INFO) Finish  compiling the whole project..."
+
+rtlib_dir='../instrument'
+g++ -fPIC -c ${rtlib_dir}/rtlib.cpp
 
 src_dir='../src'
 pass_so_path='./skeleton/libSkeletonPass.so'
 
+# build/skeleton/libSkeletonPass.so
+
 clang++ -fPIC -emit-llvm -O0 -g -fno-discard-value-names -S -c ${src_dir}/demo.cpp -o ${src_dir}/demo.ll
-touch aaa.txt
-objdump -T ${pass_so_path} | grep logint
-# objdump -T ${pass_so_path} > aaa.txt
 
-echo "(INFO) Start loading Pass..."
-opt -O0 -load-pass-plugin ${pass_so_path} --passes="skeleton" ${src_dir}/demo.ll -o demo
+clang++ -fPIC -flegacy-pass-manager -O0 -g -fno-discard-value-names -Xclang -load -Xclang ${pass_so_path} -c ${src_dir}/demo.ll
 
-echo "(INFO) Finish loading Pass!"
 
-echo "(INFO) Start compiling codes..."
-lli -O0 demo
-echo "(INFO) Finish compiling codes!"
+cd ../output
+rm ./a.out
+rm ./results.txt
+
+build_src='../build'
+g++ -fPIC ${build_src}/demo.o ${build_src}/rtlib.o
+
+./a.out
