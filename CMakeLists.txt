@@ -38,6 +38,6 @@ add_definitions("-fPIC")
 # Doing this at the end so that all definitions and link/include paths are
 # available for the sub-projects.
 #===============================================================================
-add_subdirectory(instrument)
+add_subdirectory(runtimelib)
 add_subdirectory(jsonutil)
 add_subdirectory(skeleton)  # Use your pass name here.

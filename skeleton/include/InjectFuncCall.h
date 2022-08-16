@@ -14,6 +14,9 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
+// #include "json_util.h"
+#include "../../jsonutil/src/json_util.cpp"
+
 using namespace llvm;
 
 //------------------------------------------------------------------------------

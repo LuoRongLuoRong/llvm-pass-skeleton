@@ -30,10 +30,8 @@
 //
 // License: MIT
 //========================================================================
+
 #include "InjectFuncCall.h"
-// h 会有重复定义的问题
-// #include "json_util.h"
-#include "json_util.h"
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
@@ -44,7 +42,12 @@
 #define DEBUG_TYPE "inject-func-call"
 
 //-----------------------------------------------------------------------------
-// Helper function provide by LLVM
+// 构造函数：初始化全局变量
+//-----------------------------------------------------------------------------
+
+
+//-----------------------------------------------------------------------------
+// Helper function provided by LLVM
 //-----------------------------------------------------------------------------
 
 // IR 指令在源代码中的行号
@@ -92,6 +95,66 @@ FunctionCallee InjectFuncCall::getPrintf(Module &M)
   return Printf;
 }
 
+void insertRedirection(Module &M)
+{
+  auto &CTX = M.getContext();
+  // redirect2file
+}
+
+
+void addLogFunctionCallee(Module &M, LLVMContext &Ctx, Function &F, Type *stateType, std::string rtFuncName)
+{
+
+    auto &CTX = M.getContext();
+    PointerType *PrintfArgTy = PointerType::getUnqual(Type::getInt8Ty(CTX));
+
+    // STEP 1: Inject the declaration of printf
+    // ----------------------------------------
+    // Create (or _get_ in cases where it's already available) the following
+    // declaration in the IR module:
+    //    declare i32 @printf(i8*, ...)
+    // It corresponds to the following C declaration:
+    //    int printf(char *, ...)
+    FunctionType *PrintfTy = FunctionType::get(
+        IntegerType::getInt32Ty(CTX),
+        PrintfArgTy,
+        /*IsVarArgs=*/true);
+
+    FunctionCallee Printf = M.getOrInsertFunction("printf", PrintfTy);
+
+    // Set attributes as per inferLibFuncAttributes in BuildLibCalls.cpp
+    Function *PrintfF = dyn_cast<Function>(Printf.getCallee());
+    PrintfF->setDoesNotThrow();
+    PrintfF->addParamAttr(0, Attribute::NoCapture);
+    PrintfF->addParamAttr(0, Attribute::ReadOnly);
+
+    // STEP 2: Inject a global variable that will hold the printf format string
+    // ------------------------------------------------------------------------
+    Constant *PrintfFormatStr = llvm::ConstantDataArray::getString(
+        CTX, "(llvm-tutor) Hello from: %s\n(llvm-tutor)   number of arguments: %d\n");
+
+    Constant *PrintfFormatStrVar =
+        M.getOrInsertGlobal("PrintfFormatStr", PrintfFormatStr->getType());
+    dyn_cast<GlobalVariable>(PrintfFormatStrVar)->setInitializer(PrintfFormatStr);
+
+    // STEP 3: For each function in the module, inject a call to printf
+    // ----------------------------------------------------------------
+    // Get an IR builder. Sets the insertion point to the top of the function
+    IRBuilder<> Builder(&*F.getEntryBlock().getFirstInsertionPt());
+
+    // Inject a global variable that contains the function name
+    auto FuncName = Builder.CreateGlobalStringPtr(F.getName());
+
+    // Printf requires i8*, but PrintfFormatStrVar is an array: [n x i8]. Add
+    // a cast: [n x i8] -> i8*
+    Value *FormatStrPtr =
+        Builder.CreatePointerCast(PrintfFormatStrVar, PrintfArgTy, "formatStr");
+
+    // Finally, inject a call to printf
+    Builder.CreateCall(
+        Printf, {FormatStrPtr, FuncName, Builder.getInt32(F.arg_size())});
+}
+
 void InjectFuncCall::insertPrintf(LLVMContext &CTX, Function &F, Instruction *inst, BasicBlock &B,
                                   FunctionCallee Printf, Constant *PrintfFormatStrVar,
                                   std::string filename, std::string varname, int type,
@@ -117,13 +180,25 @@ void InjectFuncCall::insertPrintf(LLVMContext &CTX, Function &F, Instruction *in
       /*variable_value=*/variableValue};
 
   // Finally, inject a call to printf
-  Builder.CreateCall(
-      Printf, args);
+  Builder.CreateCall(Printf, args);
 }
 
 bool InjectFuncCall::runOnModule(Module &M)
 {
-  bool InsertedAtLeastOnePrintf = false;
+  // STEP 1: Inject the declaration of printf
+  // ----------------------------------------
+  JsonUtil *ju = JsonUtil::getInstance();
+  ju->save();
+
+  std::string filename = M.getSourceFileName();
+  // 该文件不值得继续探索
+  if (!ju->inFilepaths(filename))
+  {
+    errs() << "该文件不值得继续探索: " << filename << "\n";
+    return false;
+  }
+  errs() << "该文件值得继续探索: " << filename << "\n";
+
   auto &CTX = M.getContext();
 
   // STEP 1: Inject the declaration of printf
@@ -132,7 +207,8 @@ bool InjectFuncCall::runOnModule(Module &M)
 
   // STEP 2: Inject a global variable that will hold the printf format string
   // ------------------------------------------------------------------------
-  llvm::Constant *PrintfFormatStr = llvm::ConstantDataArray::getString(CTX, "(luorong) %s,%d,%s,%d,%d\n");
+  llvm::Constant *PrintfFormatStr = 
+    llvm::ConstantDataArray::getString(CTX, "(luorong) %s, %d, %s, %d, %d\n");
 
   Constant *PrintfFormatStrVar = M.getOrInsertGlobal("PrintfFormatStr", PrintfFormatStr->getType());
   dyn_cast<GlobalVariable>(PrintfFormatStrVar)->setInitializer(PrintfFormatStr);
@@ -141,8 +217,11 @@ bool InjectFuncCall::runOnModule(Module &M)
   // ----------------------------------------------------------------
   for (auto &F : M)
   {
+    // 防止重复遍历
     if (F.isDeclaration())
+    {
       continue;
+    }
     for (auto &B : F)
     {
       for (auto &I : B)
@@ -160,15 +239,16 @@ bool InjectFuncCall::runOnModule(Module &M)
           if (varIrType->isIntegerTy())
           {
             insertPrintf(CTX, F, inst, B, Printf, PrintfFormatStrVar,
-                         "filename", varName, 1,
+                         filename, varName, 1,
                          /*run time value of the variable*/ dyn_cast_or_null<Value>(inst));
           }
         }
 
         if (auto *inst = dyn_cast<StoreInst>(&I))
         {
-          Value *arg1 = inst->getOperand(0);
-          Value *arg2 = inst->getOperand(1);
+          // For example, store i32 2, i32* %i1, align 4, !dbg !860
+          Value *arg1 = inst->getOperand(0); // i32 2
+          Value *arg2 = inst->getOperand(1); // i32* %i1
 
           std::string varName = arg2->getName().str();
           // e.g., %i1 type is i32
@@ -177,18 +257,15 @@ bool InjectFuncCall::runOnModule(Module &M)
           if (varIrType->isIntegerTy())
           {
             insertPrintf(CTX, F, inst, B, Printf, PrintfFormatStrVar,
-                         "filename", varName, 1,
+                         filename, varName, 1,
                          /*run time value of the variable*/ arg1);
           }
-
         }
       }
     }
-
-    InsertedAtLeastOnePrintf = true;
   }
-
-  return InsertedAtLeastOnePrintf;
+  // has instrumented
+  return true;
 }
 
 PreservedAnalyses InjectFuncCall::run(llvm::Module &M,

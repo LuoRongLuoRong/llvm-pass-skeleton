@@ -1,24 +1,26 @@
 #include "llvm/Pass.h"
-#include "llvm/IR/Function.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/IR/LegacyPassManager.h"
-#include "llvm/IR/InstrTypes.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/ValueSymbolTable.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/IR/Value.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/IR/Value.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Function.h"
 
 // h 会有重复定义的问题
 // #include "json_util.h"
 #include "../jsonutil/src/json_util.cpp"
+#include "../runtimelib/include/rtlib.h"
+#include "../runtimelib/src/rtlib.cpp"
 
 #define MAX_INT (((unsigned int)(-1)) >> 1)
 
@@ -44,10 +46,6 @@ public:
                                 llvm::ModuleAnalysisManager &);
     bool runOnModule(llvm::Module &M);
 
-    // 返回函数所在的[文件的路径+文件的名称]
-    StringRef getSourceName(Function &F);
-    // 返回文件所在的[文件的路径+文件的名称]
-    StringRef getSourceFilePath(Module &M);
     // IR 指令在源代码中的行号
     int getLineNumber(Instruction *inst, LLVMContext &Ctx);
     // IR 指令在源代码中的行号的 Value
@@ -59,9 +57,9 @@ public:
     // 检查该变量是否是状态变量或者关键变量
     bool isKeyOrStateVar(Instruction *op, LLVMContext &Ctx, std::string filename, std::string varname, JsonUtil *ju);
     // 创建运行时函数：基本创建方法
-    FunctionCallee getLogFunc(LLVMContext &Ctx, Function &F, Type *stateType, std::string rtFuncName);
+    FunctionCallee getLogFunc(LLVMContext &Ctx, Module &M, Type *stateType, std::string rtFuncName);
     // 创建运行时函数：根据数据类型创建
-    FunctionCallee getLogFunc(LLVMContext &Ctx, Function &F, int dataType);
+    FunctionCallee getLogFunc(LLVMContext &Ctx, Module &M, int dataType);
     // IR 中某个函数的 local variable 表，和源代码中的局部变量是不一样的
     void getLocalVariables(Function &F);
 
@@ -109,34 +107,6 @@ PreservedAnalyses Skeleton::run(llvm::Module &M,
 
     return (Changed ? llvm::PreservedAnalyses::none()
                     : llvm::PreservedAnalyses::all());
-}
-
-StringRef Skeleton::getSourceName(Function &F)
-{
-    errs() << "getSourceName: ";
-
-    errs() << F.hasName();
-    DISubprogram *DI = F.getSubprogram();
-    if (!DI)
-    {
-        errs() << "Function " << F.getName() << " does not have a subprogram\n";
-        return F.getName();
-    }
-    DIFile *DIF = DI->getFile();
-    if (!DIF)
-    {
-        errs() << "Function " << F.getName() << " does not have a file\n";
-        return F.getName();
-    }
-    return DIF->getFilename();
-}
-
-StringRef Skeleton::getSourceFilePath(Module &M)
-{
-    // !3 = !DIFile(filename: "/usr/lib/gcc/x86_64-linux-gnu/7.5.0/../../../../include/c++/7.5.0/iostream", directory: "")
-    // !14 = !DIFile(filename: "http/http_conn.cpp", directory: "/home/fdse/luorong/LLVM/test/llvm-pass-skeleton/TinyWebServer")
-
-    return "";
 }
 
 // IR 指令在源代码中的行号
@@ -239,47 +209,48 @@ void addLogFunctionCallee(Module &M, LLVMContext &Ctx, Function &F, Type *stateT
         Printf, {FormatStrPtr, FuncName, Builder.getInt32(F.arg_size())});
 }
 
-FunctionCallee Skeleton::getLogFunc(LLVMContext &Ctx, Function &F, Type *stateType, std::string rtFuncName)
+FunctionCallee Skeleton::getLogFunc(LLVMContext &Ctx, Module &M, Type *stateType, std::string rtFuncName)
 {
     // 函数参数：
     std::vector<Type *> paramTypes = {
-        PointerType::getUnqual(Type::getInt8Ty(Ctx)), // filename
-        // Type::getInt8PtrTy(Ctx),
-        Type::getInt32Ty(Ctx),                        // line
-        PointerType::getUnqual(Type::getInt8Ty(Ctx)), // name
-        Type::getInt32Ty(Ctx),                        // type
-        stateType,                                    // state
-        stateType                                     // old_state
+        // PointerType::getUnqual(Type::getInt8Ty(Ctx)), // filename
+        Type::getInt8PtrTy(Ctx),
+        Type::getInt32Ty(Ctx), // line
+        Type::getInt8PtrTy(Ctx),
+        // PointerType::getUnqual(Type::getInt8Ty(Ctx)), // name
+        Type::getInt32Ty(Ctx), // type
+        stateType,             // state
+        stateType              // old_state
     };
     // 函数返回值：
     Type *retType = Type::getVoidTy(Ctx);
     // 函数类型：
     FunctionType *logFuncType = FunctionType::get(retType, paramTypes, /*IsVarArgs=*/false);
     // 根据函数的名字获取该函数：
-    FunctionCallee logFunc = F.getParent()->getOrInsertFunction(rtFuncName, logFuncType);
+    FunctionCallee logFunc = M.getOrInsertFunction(rtFuncName, logFuncType);
     return logFunc;
 }
 
-FunctionCallee Skeleton::getLogFunc(LLVMContext &Ctx, Function &F, int dataType)
+FunctionCallee Skeleton::getLogFunc(LLVMContext &Ctx, Module &M, int dataType)
 {
     switch (dataType)
     {
     case LOG_BOOL: // bool
-        return getLogFunc(Ctx, F, Type::getInt8Ty(Ctx), "logbool");
+        return getLogFunc(Ctx, M, Type::getInt8Ty(Ctx), "logbool");
     case LOG_CHAR: // char
-        return getLogFunc(Ctx, F, Type::getInt8Ty(Ctx), "logchar");
+        return getLogFunc(Ctx, M, Type::getInt8Ty(Ctx), "logchar");
     case LOG_STRING: // string
-        return getLogFunc(Ctx, F, Type::getInt8PtrTy(Ctx), "logstring");
+        return getLogFunc(Ctx, M, Type::getInt8PtrTy(Ctx), "logstring");
     case LOG_FLOAT: // float
-        return getLogFunc(Ctx, F, Type::getFloatTy(Ctx), "logfloat");
+        return getLogFunc(Ctx, M, Type::getFloatTy(Ctx), "logfloat");
     case LOG_DOUBLE: // double
-        return getLogFunc(Ctx, F, Type::getDoubleTy(Ctx), "logdouble");
+        return getLogFunc(Ctx, M, Type::getDoubleTy(Ctx), "logdouble");
     case LOG_CHAR_ATSRERISK: // char*
-        return getLogFunc(Ctx, F, Type::getInt8PtrTy(Ctx), "logcharasterisk");
+        return getLogFunc(Ctx, M, Type::getInt8PtrTy(Ctx), "logcharasterisk");
     case LOG_CHAR_ARRAY: // char[]
-        return getLogFunc(Ctx, F, Type::getInt8PtrTy(Ctx), "logchararray");
+        return getLogFunc(Ctx, M, Type::getInt8PtrTy(Ctx), "logchararray");
     default: // LOG_INT: int
-        return getLogFunc(Ctx, F, Type::getInt32Ty(Ctx), "logint");
+        return getLogFunc(Ctx, M, Type::getInt32Ty(Ctx), "logint");
     }
 }
 
@@ -305,17 +276,16 @@ void Skeleton::log_int_load(std::string filename, std::string varname, int type,
     builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
 
     // Value *argfilename = builder.CreateGlobalString(filename);
+    // Value *argstr = builder.CreateGlobalString(varname);
     Value *argfilename = builder.CreatePointerCast(
         builder.CreateGlobalString(filename),
-        PointerType::getUnqual(Type::getInt8Ty(Ctx)), "argfilename");
-    // Value *argstr = builder.CreateGlobalString(varname);
+        PointerType::getUnqual(Type::getInt8Ty(Ctx)));
     Value *argstr = builder.CreatePointerCast(
         builder.CreateGlobalString(varname),
-        PointerType::getUnqual(Type::getInt8Ty(Ctx)), "argvarname");
+        PointerType::getUnqual(Type::getInt8Ty(Ctx)));
     Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
     Value *argvalue = dyn_cast_or_null<Value>(inst); // state
     Value *argline = getLine(inst, Ctx);             //
-    Value *argold = dyn_cast_or_null<Value>(inst);   // old state
 
     Value *args[] = {argfilename, argline, argstr, argtype, argvalue, argvalue};
     // Value *args[] = {ConstantInt::get(Type::getInt32Ty(Ctx), 1)};
@@ -336,6 +306,7 @@ void insertInt(Module &M)
 
 void Skeleton::log_int_store(std::string filename, std::string varname, int type, StoreInst *inst, BasicBlock &B, FunctionCallee logFunc, LLVMContext &Ctx)
 {
+    return;
     errs() << "看这个看这个！";
     IRBuilder<> builder(inst);
     builder.SetInsertPoint(&B, ++builder.GetInsertPoint());
@@ -344,66 +315,17 @@ void Skeleton::log_int_store(std::string filename, std::string varname, int type
     Value *arg2 = inst->getOperand(1);
     // errs() << "StoreInst R: " << *arg2 << ": [" << arg2->getName() << "]\n";
     // Value *argfilename = builder.CreateGlobalString(filename);
+    // Value *argstr = builder.CreateGlobalString(varname);
     Value *argfilename = builder.CreatePointerCast(
         builder.CreateGlobalString(filename),
-        PointerType::getUnqual(Type::getInt8Ty(Ctx)), /*name=*/"argfilename");
-    // Value *argstr = builder.CreateGlobalString(varname);
+        PointerType::getUnqual(Type::getInt8Ty(Ctx)));
+
     Value *argstr = builder.CreatePointerCast(
         builder.CreateGlobalString(varname),
-        PointerType::getUnqual(Type::getInt8Ty(Ctx)), "argvarname");
+        PointerType::getUnqual(Type::getInt8Ty(Ctx)));
     Value *argtype = ConstantInt::get(Type::getInt32Ty(Ctx), type);
     Value *argi = inst->getOperand(0);   // state
     Value *argline = getLine(inst, Ctx); //
-
-    Value *argold;
-    // errs() << "   arg2 的 Use 的数目" << arg2->getNumUses() << "\n";
-
-    Value::use_iterator U = arg2->use_begin();
-
-    bool isInitial = true;
-    do
-    {
-        // 1. 全局变量，直接 load
-        if (!isa<AllocaInst>(arg2))
-        {
-            isInitial = false;
-            break;
-        }
-        // 2. 局部变量，检测是否曾被赋值过。如果前面全是 load 则认为是初始化。
-        // 循环终止的条件：（1）遇到本 instruction【说明是初始化】；（2）遇到结尾。
-
-        // 只能倒序遍历，所以不得不出此下策
-        while (U->getUser() != inst)
-        {
-            ++U;
-        }
-        ++U; // 跳过 inst
-
-        while (U != arg2->use_end())
-        {
-            // 之前已经被使用过了
-            if (isa<StoreInst>(U->getUser()))
-            {
-                isInitial = false;
-                // errs() << "之前已经被" << inst << "使用过了" << U->getUser() << " >>> Use：" << *(U->getUser()) << "\n";
-
-                break;
-            }
-            ++U;
-            // errs() << "  U->getUser() == inst: " << (U->getUser() == inst) << "\n";
-        }
-    } while (false);
-
-    if (isInitial)
-    {
-        // 未被初始化
-        argold = ConstantInt::get(Type::getInt32Ty(Ctx), MAX_INT);
-    }
-    else
-    {
-        LoadInst *loadInst = new LoadInst(arg2->getType(), arg2, arg2->getName(), inst);
-        argold = dyn_cast_or_null<Value>(loadInst);
-    }
 
     Value *args[] = {argfilename, argline, argfilename, argtype, argi, argi}; //
     builder.CreateCall(logFunc, args);
@@ -630,11 +552,21 @@ void Skeleton::log_char_array_call(std::string filename, std::string varname, in
 // 目的是减少成员变量的无效赋值，以提高项目效率。
 bool Skeleton::runOnModule(Module &M)
 {
+    // logint("Hello", 1, "hello", 1, 1);
+    // defining the global variable
+    // M.getOrInsertGlobal("logint", Type::getVoidTy(M.getContext()));
+    // llvm::GlobalVariable *gVar = M.getNamedGlobal("logint");
+
+    // // initialize the variable with an undef value to ensure it is added to the symbol table
+    // gVar->setInitializer(llvm::UndefValue::get(Type::getVoidTy(M.getContext())));
+
+
     JsonUtil *ju = JsonUtil::getInstance();
+    // 读取并存储 json 内容
     ju->save();
     // 判断 filename 是否包含在 json 文件中
     std::string jsonPath = "../SVsite.json";
-
+    // 返回文件所在的[文件在项目中的相对路径+文件的名称]
     std::string filename = M.getSourceFileName();
 
     // 该文件不值得继续探索
@@ -645,6 +577,18 @@ bool Skeleton::runOnModule(Module &M)
     }
     errs() << "该文件值得继续探索: " << filename << "\n";
 
+    // Get the function to call from our runtime library.
+    LLVMContext &Ctx = M.getContext();
+
+    FunctionCallee logFuncInt = getLogFunc(Ctx, M, LOG_INT);
+    FunctionCallee logFuncBool = getLogFunc(Ctx, M, LOG_BOOL);
+    FunctionCallee logFuncChar = getLogFunc(Ctx, M, LOG_CHAR);
+    FunctionCallee logFuncFloat = getLogFunc(Ctx, M, LOG_FLOAT);
+    FunctionCallee logFuncDouble = getLogFunc(Ctx, M, LOG_DOUBLE);
+    FunctionCallee logFuncString = getLogFunc(Ctx, M, LOG_STRING);
+    FunctionCallee logFuncCharArray = getLogFunc(Ctx, M, LOG_CHAR_ARRAY);
+    FunctionCallee logFuncCharAsterisk = getLogFunc(Ctx, M, LOG_CHAR_ATSRERISK);
+
     for (auto &F : M)
     {
         if (F.isDeclaration() || F.isIntrinsic())
@@ -654,18 +598,6 @@ bool Skeleton::runOnModule(Module &M)
 
         auto argumnents = F.arg_size();
         errs() << F.getName() << argumnents << "\n";
-
-        // Get the function to call from our runtime library.
-        LLVMContext &Ctx = F.getContext();
-
-        FunctionCallee logFuncInt = getLogFunc(Ctx, F, LOG_INT);
-        FunctionCallee logFuncBool = getLogFunc(Ctx, F, LOG_BOOL);
-        FunctionCallee logFuncChar = getLogFunc(Ctx, F, LOG_CHAR);
-        FunctionCallee logFuncFloat = getLogFunc(Ctx, F, LOG_FLOAT);
-        FunctionCallee logFuncDouble = getLogFunc(Ctx, F, LOG_DOUBLE);
-        FunctionCallee logFuncString = getLogFunc(Ctx, F, LOG_STRING);
-        FunctionCallee logFuncCharArray = getLogFunc(Ctx, F, LOG_CHAR_ARRAY);
-        FunctionCallee logFuncCharAsterisk = getLogFunc(Ctx, F, LOG_CHAR_ATSRERISK);
 
         for (auto &B : F)
         {
@@ -859,40 +791,6 @@ bool Skeleton::runOnModule(Module &M)
     // 对源码进行了修改返回 true
     return true;
 }
-
-/********************************  pass 的主体  *******************************/
-
-// namespace
-// {
-//     // 继承自 FunctionPass
-//     struct SkeletonPass : public ModulePass
-//     {
-//         static char ID;
-//         SkeletonPass() : ModulePass(ID) {}
-
-//         virtual bool runOnModule(Module &M)
-//         {
-//             return Impl.runImpl(M);
-//         }
-
-//     private:
-//         Skeleton Impl;
-//     };
-// }
-
-/********************************  pass 的注册  *******************************/
-// // 注册 pass 并且自启动
-// char SkeletonPass::ID = 0;
-
-// // Automatically enable the pass.
-// // http://adriansampson.net/blog/clangpass.html
-// static void registerSkeletonPass(const PassManagerBuilder &, legacy::PassManagerBase &PM)
-// {
-//     PM.add(new SkeletonPass());
-// }
-// static RegisterStandardPasses RegisterMyPass(
-//     PassManagerBuilder::EP_EarlyAsPossible,
-//     registerSkeletonPass);
 
 //-----------------------------------------------------------------------------
 // New PM Registration

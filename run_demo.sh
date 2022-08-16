@@ -11,12 +11,15 @@ src_dir='../src'
 pass_so_path='./skeleton/libSkeletonPass.so'
 
 clang++ -fPIC -emit-llvm -O0 -g -fno-discard-value-names -S -c ${src_dir}/demo.cpp -o ${src_dir}/demo.ll
+touch aaa.txt
+objdump -T ${pass_so_path} | grep logint
+# objdump -T ${pass_so_path} > aaa.txt
 
 echo "(INFO) Start loading Pass..."
-opt -load-pass-plugin ${pass_so_path} --passes="skeleton" ${src_dir}/demo.ll -o demo
+opt -O0 -load-pass-plugin ${pass_so_path} --passes="skeleton" ${src_dir}/demo.ll -o demo
 
 echo "(INFO) Finish loading Pass!"
 
 echo "(INFO) Start compiling codes..."
-lli demo
+lli -O0 demo
 echo "(INFO) Finish compiling codes!"

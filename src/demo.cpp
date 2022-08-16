@@ -1,5 +1,5 @@
 #include <iostream>
-#include <string>
+// #include <string>
 
 // extern "C" void logint1(int i) {
 //   std::cout << "GOOD" << std::endl;
@@ -19,9 +19,15 @@ int main() {
     // d1 = d1 + 8.9;
     // std::cout << d1 << " is 9.9" << std::endl;
 
+    freopen("../output/results.txt", "wa", stdout);
+    printf("Hello\n");
+    // freopen("/dev/stdout", "w", stdout);
+    freopen("../output/results.txt", "wa", stdout);
+    printf("Hello\n");
+
     int i1 = 2; 
     i1 = i1 + 5; 
-    std::cin >> i1; 
+    // std::cin >> i1; 
     int i2 = i1;
     i1 = i1 + 5; 
     i2 = i1 + 9; 
