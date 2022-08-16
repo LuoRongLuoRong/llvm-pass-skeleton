@@ -3,6 +3,8 @@ add_library(
     src/rtlib.cpp
 )
 
+add_definitions("-fPIC")
+
 target_include_directories(
     Rtlib
     PUBLIC
