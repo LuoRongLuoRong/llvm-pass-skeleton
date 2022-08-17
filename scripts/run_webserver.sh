@@ -1,8 +1,12 @@
-# 对 Pass 进行构造
-cd ../build
-rm -rf *
+cd ..
+
+if [ ! -d build  ];then
+  mkdir build
+fi
+cd build && rm -rf *
 cmake ..
 make
+
 
 rtlib_dir='../runtimelib/src'
 g++ -fPIC -c ${rtlib_dir}/rtlib.cpp
@@ -16,6 +20,9 @@ pass_so_path='./skeleton/libSkeletonPass.so'
 
 clang++ -fPIC -flegacy-pass-manager -O0 -g -fno-discard-value-names -Xclang -load -Xclang ${pass_so_path} -c ${src_dir}/${project_ir_file_name}.ll
 
+if [ ! -d ../output ];then
+  mkdir ../output
+fi
 cd ../output
 rm ./webserver
 rm ./results.txt

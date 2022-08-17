@@ -1,10 +1,10 @@
-build
+
 *.o
 *.out
 *.tmp
-*.ll
 *.bc
 cmake-build-debug/
 .idea/
 
 output/
+build/

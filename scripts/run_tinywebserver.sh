@@ -1,5 +1,11 @@
-cd ../build
-rm -rf *
+cd ..
+
+if [ ! -d build  ];then
+  mkdir build
+else
+  echo dir exist
+fi
+cd build && rm -rf *
 cmake ..
 make
 
