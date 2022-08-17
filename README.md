@@ -88,3 +88,12 @@ http/http_conn.cpp, 353, m_check_state, 2, 2
 
 ```
 以上是发送一条 POST 请求的结果。
+
+
+
+
+
+# NOTICE
+由于我们在整个项目中，路径是十分重要的，所以我们需要注意文件的分隔符。
+
+# WebServer 测试结果记录

@@ -92,7 +92,8 @@ bool JsonUtil::hasVar(std::string filepath, int line, int column, std::string va
     {
         std::string key = getKey(filepath, line, column);
         bool forDebug = varMap.end() != varMap.find(key);
-        std::cout << forDebug << filepath << "::" << line << "::" << column << "::" << varname << std::endl;
+        if (forDebug)
+            std::cout << forDebug << filepath << "::" << line << "::" << column << "::" << varname << std::endl;
         return varMap.end() != varMap.find(key);
     }
     else
@@ -108,13 +109,13 @@ bool JsonUtil::hasVar(std::string filepath, int line, int column, std::string va
             {
                 std::string sep = "_";
                 varnameMap[filepath + sep + varname] = sv;
-                std::cout << "true" << filepath << "::" << line << "::" << column << "::" << varname << std::endl;
+                std::cout << "true " << filepath << "::" << line << "::" << column << "::" << varname << std::endl;
         
                 return true;
             }
         }
     }
-    std::cout << "False" << filepath << "::" << line << "::" << column << "::" << varname << std::endl; 
+    // std::cout << "False " << filepath << "::" << line << "::" << column << "::" << varname << std::endl; 
     return false;
 }
 

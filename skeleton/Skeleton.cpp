@@ -19,7 +19,7 @@
 // #include "../../jsonutil/json_util.cpp"
 
 // #include "../jsonutil/include/json_util.h"
-#include "../jsonutil/json_util.cpp"
+#include "../jsonutil/src/json_util.cpp"
 
 #define MAX_INT (((unsigned int)(-1)) >> 1)
 
@@ -152,13 +152,16 @@ bool Skeleton::isKeyOrStateVar(Instruction *op, LLVMContext &Ctx, std::string fi
 {
     int line = getLineNumber(op, Ctx);
     int column = getColumnNumber(op, Ctx);
-    errs() << "检查变量是否存在：" << filename << " " << varname << " " << line << " " << column << " " << *op << " ";
-    if (line == 0 || column == 0 || !ju->hasVar(filename, line, column, varname))
+    // errs() << "检查变量是否存在：" << filename << " " << varname << " " << line << " " << column << " " << *op << " ";
+    // line == 0 或者 column == 0 说明 LLVM 的 Metadata 没有记录该变量的 line 或者 column
+    // if (line == 0 || column == 0 || !ju->hasVar(filename, line, column, varname))
+    if (line == 0 || !ju->hasVar(filename, line, column, varname))
     {
         
-        errs() << " 不存在 \n";
+        // errs() << " 不存在 \n";
         return false;
     }
+    errs() << "检查变量是否存在：" << filename << " " << varname << " " << line << " " << column << " " << *op << " ";
     errs() << " 存在 \n";
     return true;
 }
@@ -253,57 +256,7 @@ void Skeleton::log_int_store(std::string filename, std::string varname, int type
     Value *argi = inst->getOperand(0);   // state
     Value *argline = getLine(inst, Ctx); //
 
-    Value *argold;
-    // errs() << "   arg2 的 Use 的数目" << arg2->getNumUses() << "\n";
-
-    Value::use_iterator U = arg2->use_begin();
-
-    bool isInitial = true;
-    do
-    {
-        // 1. 全局变量，直接 load
-        if (!isa<AllocaInst>(arg2))
-        {
-            isInitial = false;
-            break;
-        }
-        // 2. 局部变量，检测是否曾被赋值过。如果前面全是 load 则认为是初始化。
-        // 循环终止的条件：（1）遇到本 instruction【说明是初始化】；（2）遇到结尾。
-
-        // 只能倒序遍历，所以不得不出此下策
-        while (U->getUser() != inst)
-        {
-            ++U;
-        }
-        ++U; // 跳过 inst
-
-        while (U != arg2->use_end())
-        {
-            // 之前已经被使用过了
-            if (isa<StoreInst>(U->getUser()))
-            {
-                isInitial = false;
-                // errs() << "之前已经被" << inst << "使用过了" << U->getUser() << " >>> Use：" << *(U->getUser()) << "\n";
-
-                break;
-            }
-            ++U;
-            // errs() << "  U->getUser() == inst: " << (U->getUser() == inst) << "\n";
-        }
-    } while (false);
-
-    if (isInitial)
-    {
-        // 未被初始化
-        argold = ConstantInt::get(Type::getInt32Ty(Ctx), MAX_INT);
-    }
-    else
-    {
-        LoadInst *loadInst = new LoadInst(arg2->getType(), arg2, arg2->getName(), inst);
-        argold = dyn_cast_or_null<Value>(loadInst);
-    }
-
-    Value *args[] = {argfilename, argline, argstr, argtype, argi, argold}; //
+    Value *args[] = {argfilename, argline, argstr, argtype, argi, argi}; //
     builder.CreateCall(logFunc, args);
 }
 
@@ -538,7 +491,7 @@ bool Skeleton::runImpl(Function &F)
     // 该文件不值得继续探索
     if (!ju->inFilepaths(filename))
     {
-        // errs() << "该文件不值得继续探索: " << filename << "\n";
+        errs() << "该文件不值得继续探索: " << filename << "\n";
         return false;
     }
     errs() << "该文件值得继续探索: " << filename << "\n";
@@ -581,6 +534,7 @@ bool Skeleton::runImpl(Function &F)
             // LLVM 会给这个变量一个临时名称。在这个函数
             if (auto *op = dyn_cast<BitCastInst>(&I))
             {
+                continue;
                 errs() << "bitcast" << I << '\n';
                 Value *arg1 = op->getOperand(0); // %4 = xxx
                 errs() << "   " << *arg1 << '\n';

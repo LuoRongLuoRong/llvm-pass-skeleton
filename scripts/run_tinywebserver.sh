@@ -1,9 +1,9 @@
-cd ./build
+cd ../build
 rm -rf *
 cmake ..
 make
 
-rtlib_dir='../instrument'
+rtlib_dir='../runtimelib/src'
 g++ -fPIC -c ${rtlib_dir}/rtlib.cpp
 
 src_dir='../TinyWebServer'
