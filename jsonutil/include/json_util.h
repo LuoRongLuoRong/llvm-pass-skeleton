@@ -57,6 +57,8 @@ public:
 
     bool inFilepaths(std::string filepath);
     bool inSvs(std::string sv);
+
+    void dealWithFileSeparatror(std::string & filePath);
 };
 
 #endif // JSON_UTIL_H

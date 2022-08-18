@@ -34,5 +34,7 @@ g++ -fPIC -o webserver ${build_src}/${project_ir_file_name}.o ${build_src}/rtlib
 
 # echo 'You can run test_after_run.sh in a new terminal now.'
 echo "build connection..."
-./${project_ir_file_name} -t 5 -p 8882 -l /home/fdse/luorong/LLVM/test/llvm-pass-skeleton/output/webserver.log
+echo "you can run test_webserver.sh"
+./${project_ir_file_name} -t 5 -p 8882 -l /home/fdse/luorong/LLVM/llvm-pass-skeleton/output/webserver.log
+# webserver -t 5 -p 8882 -l /home/fdse/luorong/LLVM/llvm-pass-skeleton/output/webserver.log
 

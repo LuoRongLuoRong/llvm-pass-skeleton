@@ -2,8 +2,6 @@ cd ..
 
 if [ ! -d build  ];then
   mkdir build
-else
-  echo dir exist
 fi
 cd build && rm -rf *
 cmake ..
@@ -17,6 +15,9 @@ pass_so_path='./skeleton/libSkeletonPass.so'
 
 clang++ -fPIC -flegacy-pass-manager -O0 -g -fno-discard-value-names -Xclang -load -Xclang ${pass_so_path} -c ${src_dir}/server.ll
 
+if [ ! -d ../output ];then
+  mkdir ../output
+fi
 cd ../output
 rm ./a.out
 rm ./results.txt

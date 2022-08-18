@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <unistd.h>
+#include <string>
 
 // 最简单的懒汉模式
 JsonUtil *JsonUtil::getInstance()
@@ -16,6 +17,25 @@ JsonUtil *JsonUtil::getInstance()
         // std::cout << "json 的的相对路径：是 " << jsonPath << std::endl;
     }
     return instance;
+}
+
+void JsonUtil::dealWithFileSeparatror(std::string & filePath) {
+    // 在 Linux 系统中文件分隔符号为斜杠/
+    // 在 Windows 系统中文件分隔符号为一个反斜杠或者两个反斜杠
+    // 这个地方是适配 linux，将其统一转换为 Linux 系统中的斜杠 /
+
+    // 1. 针对双反斜杠
+    int pos = filePath.find("\\\\");
+    while (pos > 0) {
+        filePath.replace(pos, 2, "/");
+        pos = filePath.find("\\\\", pos + 1);
+    }
+    // 2. 针对单反斜杠
+    pos = filePath.find("\\", pos + 1);
+    while (pos > 0) {
+        filePath.replace(pos, 1, "/");
+        pos = filePath.find("\\", pos + 1);
+    }
 }
 
 void JsonUtil::save()
@@ -55,12 +75,13 @@ void JsonUtil::save()
         Variable var;
         var.line = line;
         var.column = column;
+        dealWithFileSeparatror(filepath);
         var.filepath = filepath;
         var.sv = sv;
         var.svl = sv.length();
         var.type = type;
 
-        std::cout << line << ", " << column << ", " << sv << "\n";
+        std::cout << filepath << ", " << line << ", " << column << ", " << sv << "\n";
 
         // 在 variables 中记录 variable
         variables.push_back(var);
@@ -85,7 +106,7 @@ std::string JsonUtil::getKey(std::string filepath, int line, int column)
     return key;
 }
 
-// column 保留变量，实际上并没有用。
+// column 保留变量，实际上并没有用到。
 bool JsonUtil::hasVar(std::string filepath, int line, int column, std::string varname)
 {
     if (inSvs(varname))

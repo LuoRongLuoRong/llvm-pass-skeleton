@@ -491,7 +491,7 @@ bool Skeleton::runImpl(Function &F)
     // 该文件不值得继续探索
     if (!ju->inFilepaths(filename))
     {
-        errs() << "该文件不值得继续探索: " << filename << "\n";
+        // errs() << "该文件不值得继续探索: " << filename << "\n";
         return false;
     }
     errs() << "该文件值得继续探索: " << filename << "\n";
@@ -512,11 +512,15 @@ bool Skeleton::runImpl(Function &F)
     {
         for (auto &I : B)
         {
-            // if (auto *op = dyn_cast<CmpInst>(&I)){
+            
+            // if (isa<StoreInst>(&I) || !isa<LoadInst>(&I))
+            // {
+            //   errs() << "\n>>> " << I << "\n";
             // }
 
             if (auto *op = dyn_cast<GetElementPtrInst>(&I))
             {
+                continue;
                 Value *arg1 = op->getOperand(0); // %4 = xxx
                 std::string varName = arg1->getName().str();
                 // 检查该变量是否存在
@@ -545,6 +549,7 @@ bool Skeleton::runImpl(Function &F)
                 {
                     continue;
                 }
+                errs() << "\n>>> " << I << "\n";
                 std::string sv = ju->getVarname(filename, varName);
                 int type = ju->getType(filename, sv);
 
@@ -565,10 +570,6 @@ bool Skeleton::runImpl(Function &F)
                 }
             }
 
-            // if (!isa<StoreInst>(&I) && !isa<LoadInst>(&I))
-            // {
-            //   continue;
-            // }
 
             if (auto *op = dyn_cast<LoadInst>(&I))
             {
@@ -579,6 +580,7 @@ bool Skeleton::runImpl(Function &F)
                 {
                     continue;
                 }
+                errs() << "\n>>> " << I << "\n";
                 std::string sv = ju->getVarname(filename, varName);
                 int type = ju->getType(filename, sv);
 
