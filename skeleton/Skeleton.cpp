@@ -161,8 +161,8 @@ bool Skeleton::isKeyOrStateVar(Instruction *op, LLVMContext &Ctx, std::string fi
         // errs() << " 不存在 \n";
         return false;
     }
-    errs() << "检查变量是否存在：" << filename << " " << varname << " " << line << " " << column << " " << *op << " ";
-    errs() << " 存在 \n";
+    // errs() << "检查变量是否存在：" << filename << " " << varname << " " << line << " " << column << " " << *op << " ";
+    // errs() << " 存在 \n";
     return true;
 }
 
@@ -395,7 +395,7 @@ bool hasBeenInitialized(Value *v, Value *inst, LLVMContext &Ctx)
 
     while (U != v->use_end())
     {
-        errs() << "v 的 user" << U->getUser() << "\n";
+        // errs() << "v 的 user" << U->getUser() << "\n";
         // 之前已经被使用过了
         if (isa<StoreInst>(U->getUser()))
         {
@@ -494,7 +494,7 @@ bool Skeleton::runImpl(Function &F)
         // errs() << "该文件不值得继续探索: " << filename << "\n";
         return false;
     }
-    errs() << "该文件值得继续探索: " << filename << "\n";
+    // errs() << "该文件值得继续探索: " << filename << "\n";
 
     // Get the function to call from our runtime library.
     LLVMContext &Ctx = F.getContext();
@@ -549,7 +549,7 @@ bool Skeleton::runImpl(Function &F)
                 {
                     continue;
                 }
-                errs() << "\n>>> " << I << "\n";
+                // errs() << "\n>>> " << I << "\n";
                 std::string sv = ju->getVarname(filename, varName);
                 int type = ju->getType(filename, sv);
 
@@ -559,7 +559,7 @@ bool Skeleton::runImpl(Function &F)
 
                 while (U != op->use_end())
                 {
-                    errs() << "  op->use: " << *(U->getUser()) << "\n";
+                    // errs() << "  op->use: " << *(U->getUser()) << "\n";
 
                     if (auto *callOp = dyn_cast<CallInst>(U->getUser()))
                     {
@@ -580,7 +580,7 @@ bool Skeleton::runImpl(Function &F)
                 {
                     continue;
                 }
-                errs() << "\n>>> " << I << "\n";
+                // errs() << "\n>>> " << I << "\n";
                 std::string sv = ju->getVarname(filename, varName);
                 int type = ju->getType(filename, sv);
 
@@ -635,7 +635,7 @@ bool Skeleton::runImpl(Function &F)
                     // log_int_store(filename, varname, type, op, B, logFuncInt, Ctx);
 
                     unsigned int_bit_width = value_ir_type->getIntegerBitWidth();
-                    errs() << "IntegerType" << int_bit_width << "\n";
+                    // errs() << "IntegerType" << int_bit_width << "\n";
                     if (int_bit_width == 1)
                     {
                         log_int_store(filename, sv, type, op, B, logFuncBool, Ctx);

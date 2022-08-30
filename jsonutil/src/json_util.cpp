@@ -49,7 +49,7 @@ void JsonUtil::save()
     Json::Value files;
     reader.parse(ifs, files);
     // 读取 json 文件
-    std::cout << jsonPath << files.size() << std::endl;
+    // std::cout << jsonPath << files.size() << std::endl;
 
     for (int i = 0; i < files.size(); ++i)
     {
@@ -64,6 +64,7 @@ void JsonUtil::save()
         int line = files[i]["line"].asInt();                    // "line": 349,
         std::string sv = files[i]["SV"].asString();             // "SV": "m_check_state",
         std::string filepath = files[i]["filepath"].asString(); // "filepath": "http/http_conn.cpp"
+        dealWithFileSeparatror(filepath);
         int type = files[i]["type"].asInt();                    // "type": 0
         int column = files[i]["column"].asInt();
 
@@ -75,13 +76,12 @@ void JsonUtil::save()
         Variable var;
         var.line = line;
         var.column = column;
-        dealWithFileSeparatror(filepath);
         var.filepath = filepath;
         var.sv = sv;
         var.svl = sv.length();
         var.type = type;
 
-        std::cout << filepath << ", " << line << ", " << column << ", " << sv << "\n";
+        // std::cout << filepath << ", " << line << ", " << column << ", " << sv << "\n";
 
         // 在 variables 中记录 variable
         variables.push_back(var);
@@ -112,9 +112,9 @@ bool JsonUtil::hasVar(std::string filepath, int line, int column, std::string va
     if (inSvs(varname))
     {
         std::string key = getKey(filepath, line, column);
-        bool forDebug = varMap.end() != varMap.find(key);
-        if (forDebug)
-            std::cout << forDebug << filepath << "::" << line << "::" << column << "::" << varname << std::endl;
+        // bool forDebug = varMap.end() != varMap.find(key);
+        // if (forDebug)
+        //     std::cout << forDebug << filepath << "::" << line << "::" << column << "::" << varname << std::endl;
         return varMap.end() != varMap.find(key);
     }
     else
@@ -130,7 +130,7 @@ bool JsonUtil::hasVar(std::string filepath, int line, int column, std::string va
             {
                 std::string sep = "_";
                 varnameMap[filepath + sep + varname] = sv;
-                std::cout << "true " << filepath << "::" << line << "::" << column << "::" << varname << std::endl;
+                // std::cout << "true " << filepath << "::" << line << "::" << column << "::" << varname << std::endl;
         
                 return true;
             }

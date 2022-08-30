@@ -5,6 +5,7 @@
 *.bc
 cmake-build-debug/
 .idea/
+.vscode/
 
 output/
 build/
