@@ -12,9 +12,9 @@ rtlib_dir='../runtimelib/src'
 g++ -fPIC -c ${rtlib_dir}/rtlib.cpp
 
 project_name='WebServer'
-project_ir_file_name='webserver'
+project_ir_file_name='wserver'
 
-src_dir='../WebServer'
+src_dir='../input/WebServer'
 echo ${src_dir}
 pass_so_path='./skeleton/libSkeletonPass.so'
 
@@ -24,17 +24,18 @@ if [ ! -d ../output ];then
   mkdir ../output
 fi
 cd ../output
-rm ./webserver
+rm ./wserver
 rm ./results.txt
+rm ./log.txt
 
 build_src='../build'
-g++ -fPIC -o webserver ${build_src}/${project_ir_file_name}.o ${build_src}/rtlib.o -lpthread -lmysqlclient -D_PTHREADS -Wno-unused-parameter
+g++ -fPIC -o ${project_ir_file_name} ${build_src}/${project_ir_file_name}.o ${build_src}/rtlib.o -lpthread -lmysqlclient -D_PTHREADS -Wno-unused-parameter
 #  -g -O0 -fno-discard-value-names -lpthread -lmysqlclient 
 #  -D_PTHREADS -Wno-unused-parameter
 
 # echo 'You can run test_after_run.sh in a new terminal now.'
 echo "build connection..."
 echo "you can run test_webserver.sh"
-./${project_ir_file_name} -t 5 -p 8882 -l /home/fdse/luorong/LLVM/llvm-pass-skeleton/output/webserver.log
+./${project_ir_file_name} -t 5 -p 8882 -l /home/fdse/luorong/llvm-pass-skeleton/input/WebServer/WebServer.log
 # webserver -t 5 -p 8882 -l /home/fdse/luorong/LLVM/llvm-pass-skeleton/output/webserver.log
 

@@ -238,6 +238,7 @@ void Skeleton::log_int_load(std::string filename, std::string varname, int type,
     Value *argold = dyn_cast_or_null<Value>(inst);   // old state
 
     Value *args[] = {argfilename, argline, argstr, argtype, argvalue, argold};
+    // errs() << argfilename << "," << argline << "," << argvalue << "\n";
     // instrumentation
     builder.CreateCall(logFunc, args);
 }
@@ -405,6 +406,7 @@ bool hasBeenInitialized(Value *v, Value *inst, LLVMContext &Ctx)
         ++U;
         // errs() << "  U->getUser() == inst: " << (U->getUser() == inst) << "\n";
     }
+    return false;
 }
 
 void Skeleton::log_char_asterisk_load(std::string filename, std::string varname, int type, LoadInst *inst,
@@ -539,9 +541,9 @@ bool Skeleton::runImpl(Function &F)
             if (auto *op = dyn_cast<BitCastInst>(&I))
             {
                 continue;
-                errs() << "bitcast" << I << '\n';
+                // errs() << "bitcast" << I << '\n';
                 Value *arg1 = op->getOperand(0); // %4 = xxx
-                errs() << "   " << *arg1 << '\n';
+                // errs() << "   " << *arg1 << '\n';
 
                 std::string varName = arg1->getName().str();
                 // 检查该变量是否存在

@@ -1,4 +1,4 @@
-cd ../WebServer/WebServer/tests/
+cd ../input/WebServer/WebServer/tests/
 g++ ./HTTPClient.cpp -o HTTPClient
 echo "Test webserver."
 ./HTTPClient
